@@ -3,3 +3,6 @@ aws:
   access-key: ${AWS_ACCESS_KEY}
   secret-key: ${AWS_ACCESS_KEY}
   s3-bucket-name: ${AWS_S3_BUCKET_NAME}
+cronica:
+  ca:
+    endpoint: ${CRONICA_CA_ENDPOINT}
