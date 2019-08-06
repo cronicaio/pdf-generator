@@ -28,6 +28,8 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.redisson:redisson-spring-boot-starter:3.10.6'
 
+    implementation group: 'com.esotericsoftware', name: 'kryo', version: '5.0.0-RC4'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
