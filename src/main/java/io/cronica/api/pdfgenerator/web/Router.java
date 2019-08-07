@@ -20,6 +20,7 @@ public class Router {
 
     @Bean
     public RouterFunction<ServerResponse> composedRouter() {
-        return route(GET("/pdf/{uuid}"), this.requestHandler::generatePDF);
+        return route(GET("/"), this.requestHandler::healthCheck)
+                .andRoute(GET("/pdf/{uuid}"), this.requestHandler::generatePDF);
     }
 }

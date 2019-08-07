@@ -22,6 +22,17 @@ public class RequestHandlerImpl implements RequestHandler {
 
     private final PDFDocumentService pdfDocumentService;
 
+    /**
+     * @see RequestHandler#healthCheck(ServerRequest)
+     */
+    @Override
+    public Mono<ServerResponse> healthCheck(final ServerRequest serverRequest) {
+        return ServerResponse.ok().build();
+    }
+
+    /**
+     * @see RequestHandler#generatePDF(ServerRequest)
+     */
     @Override
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))

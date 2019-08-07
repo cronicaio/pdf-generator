@@ -7,6 +7,11 @@ import reactor.core.publisher.Mono;
 public interface RequestHandler {
 
     /**
+     * @return {@link ServerResponse} object with {@code 200 OK} HTTP status
+     */
+    Mono<ServerResponse> healthCheck(ServerRequest serverRequest);
+
+    /**
      * Generate PDF document and return response client.
      *
      * @param serverRequest
