@@ -25,5 +25,5 @@ public interface TemplateHandler {
      * @throws IOException - if exception happens while working with files
      * @throws InterruptedException - if exception happens while generating PDF document
      */
-    InputStream generatePdfDocument() throws Exception;
+    InputStream generatePDFDocument() throws Exception;
 }

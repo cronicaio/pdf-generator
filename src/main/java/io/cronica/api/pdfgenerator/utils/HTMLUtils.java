@@ -102,7 +102,7 @@ public class HTMLUtils {
                 + "\n" + FONT_FACE_CLOSE + "\n";
     }
 
-    public static String parseAndReplaceWithParameters(
+    public static String modifyTemplate(
             Map<String, Object> parameters, final File template) throws IOException {
 
         parameters = DocumentUtils.modifyParameters(parameters);
