@@ -13,3 +13,5 @@ cronica:
 blockchain:
   wallet-private-key: ${WALLET_PRIVATE_KEY}
   quorum-node-endpoint: ${QUORUM_ENDPOINT}
+issuer:
+  bank-code: ${ISSUER_BANK_CODE}
