@@ -6,6 +6,7 @@ import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
 import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
+import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
@@ -36,7 +37,11 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private final DocumentTransactionService documentTransactionService;
 
+    private final TemplateTransactionService templateTransactionService;
+
     private final DocumentCertificateRepository documentCertificateRepository;
+
+    private final IssuerRegistryTransactionService issuerRegistryTransactionService;
 
     /**
      * @see PDFDocumentService#generatePDFDocument(String)
@@ -57,8 +62,13 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             return downloadNonStructuredDocument(redisDocument);
         }
         else {
-            // TODO: implement for StructuredDocument
-            return null;
+            try {
+                return generateStructuredDocument(docCert, redisDocument);
+            }
+            catch (Exception ex) {
+                log.error("[SERVICE] exception while generating PDF of structured document", ex);
+                return new Document();
+            }
         }
     }
 
@@ -94,14 +104,14 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final byte[] buffer = downloadPDFDocumentFromS3(redisDocument.getDocumentID());
         final String calculatedHash = DocumentUtils.getSha256(buffer);
 
-        if (!deployedHash.equals(calculatedHash)) {
+        if ( !deployedHash.equals(calculatedHash) ) {
             log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
             throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
         }
-        final InputStream signedDoc = this.cronicaCAAdapter.signDocument(new ByteArrayInputStream(buffer));
+        final InputStream signedDocument = this.cronicaCAAdapter.signDocument(new ByteArrayInputStream(buffer));
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
 
-        return Document.newInstance(fileName, signedDoc);
+        return Document.newInstance(fileName, signedDocument);
     }
 
     private byte[] downloadPDFDocumentFromS3(final String documentId) {
@@ -112,4 +122,40 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
+    private Document generateStructuredDocument(final DocumentCertificate docCertificate, final RedisDocument redisDocument) throws Exception {
+        final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCertificate);
+        templateHandler.generateTemplate();
+        templateHandler.downloadAdditionalFiles();
+        final InputStream inputStream = templateHandler.generatePDFDocument();
+
+        final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
+        final InputStream signedDocument = this.cronicaCAAdapter.signDocument(inputStream);
+
+        return Document.newInstance(fileName, signedDocument);
+    }
+
+    private TemplateHandler getTemplateHandlerAccordingToFileType(final DocumentCertificate dc) {
+        final String fileType = getFileType(dc);
+        if (fileType.equals("html")) {
+            return new HTMLTemplateHandler(
+                    this.repeater, this.awss3BucketAdapter, dc, this.issuerRegistryTransactionService,
+                    this.templateTransactionService, this.documentTransactionService);
+        }
+        else if (fileType.equals("jrxml")) {
+            return new JasperSoftTemplateHandler(
+                    this.repeater, this.awss3BucketAdapter, dc,
+                    this.issuerRegistryTransactionService, this.templateTransactionService, this.documentTransactionService);
+        }
+        else {
+            throw new RuntimeException("File with " + fileType + " extension is not supporting");
+        }
+    }
+
+    private String getFileType(final DocumentCertificate docCertificate) {
+        final String documentAddress = DocumentUtils.readDocumentAddress(docCertificate.getDocumentID());
+        final String templateID = this.documentTransactionService.getTemplateID(documentAddress);
+        final TemplateContract templateContract = this.templateTransactionService.loadTemplate(templateID);
+
+        return this.templateTransactionService.getFileTypeOfTemplate(templateContract);
+    }
 }
