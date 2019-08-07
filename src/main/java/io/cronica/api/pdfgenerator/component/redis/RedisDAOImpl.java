@@ -22,14 +22,9 @@ public class RedisDAOImpl implements RedisDAO {
     @Override
     public RedisDocument get(final String key) {
         log.info("[REDIS] reading object with '{}' key", key);
-        if ( exists(key) ) {
-            final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
-            log.info("[REDIS] found object under '{}' key", key);
-            return this.kryoSerializer.deserialize(rBinaryStream.get());
-        }
-
-        log.info("[REDIS] object with '{}' does not exists", key);
-        return null;
+        final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
+        log.info("[REDIS] found object under '{}' key", key);
+        return this.kryoSerializer.deserialize(rBinaryStream.get());
     }
 
     /**

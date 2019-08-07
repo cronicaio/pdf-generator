@@ -1,4 +1,4 @@
-package io.cronica.api.pdfgenerator.component.exception.unchecked;
+package io.cronica.api.pdfgenerator.exception;
 
 public class InvalidRequestException extends CronicaRuntimeException {
 
@@ -9,5 +9,4 @@ public class InvalidRequestException extends CronicaRuntimeException {
     public InvalidRequestException(String msg, Exception ex) {
         super(msg, ex);
     }
-
 }

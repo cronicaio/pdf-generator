@@ -1,4 +1,4 @@
-package io.cronica.api.pdfgenerator.component.exception.unchecked;
+package io.cronica.api.pdfgenerator.exception;
 
 public class CronicaRuntimeException extends RuntimeException {
 
@@ -7,7 +7,6 @@ public class CronicaRuntimeException extends RuntimeException {
     }
 
     public CronicaRuntimeException(String msg, Exception ex) {
-        super(msg + " because of " + ex.toString());
+        super(msg, ex);
     }
-
 }

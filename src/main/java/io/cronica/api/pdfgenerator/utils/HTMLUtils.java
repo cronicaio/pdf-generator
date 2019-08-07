@@ -1,7 +1,7 @@
 package io.cronica.api.pdfgenerator.utils;
 
 import io.cronica.api.pdfgenerator.component.entity.Font;
-import io.cronica.api.pdfgenerator.component.exception.unchecked.InvalidRequestException;
+import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
