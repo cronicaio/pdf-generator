@@ -1,6 +1,11 @@
 package io.cronica.api.pdfgenerator.utils;
 
+import java.math.BigInteger;
+
 public interface Constants {
+
+    BigInteger GAS_PRICE = BigInteger.ZERO;
+    BigInteger GAS_LIMIT = BigInteger.valueOf(2_000_000L);
 
     String FONT_FACE_OPEN = "@font-face {";
     String FONT_FACE_CLOSE = "}";

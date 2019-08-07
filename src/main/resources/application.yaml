@@ -1,3 +1,7 @@
+spring:
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
 aws:
   region: ${AWS_REGION}
   access-key: ${AWS_ACCESS_KEY}
@@ -6,3 +10,6 @@ aws:
 cronica:
   ca:
     endpoint: ${CRONICA_CA_ENDPOINT}
+blockchain:
+  wallet-private-key: ${WALLET_PRIVATE_KEY}
+  quorum-node-endpoint: ${QUORUM_ENDPOINT}
