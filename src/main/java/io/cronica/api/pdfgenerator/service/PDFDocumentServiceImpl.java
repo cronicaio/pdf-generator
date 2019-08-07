@@ -34,7 +34,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private final AWSS3BucketAdapter awss3BucketAdapter;
 
-    private final DocumentTransaction documentTransaction;
+    private final DocumentTransactionService documentTransactionService;
 
     private final DocumentCertificateRepository documentCertificateRepository;
 
@@ -89,7 +89,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private Document downloadNonStructuredDocument(final RedisDocument redisDocument) {
         final String documentAddress = DocumentUtils.readDocumentAddress(redisDocument.getDocumentID());
-        final String deployedHash = this.documentTransaction.getHash(documentAddress);
+        final String deployedHash = this.documentTransactionService.getHash(documentAddress);
 
         final byte[] buffer = downloadPDFDocumentFromS3(redisDocument.getDocumentID());
         final String calculatedHash = DocumentUtils.getSha256(buffer);

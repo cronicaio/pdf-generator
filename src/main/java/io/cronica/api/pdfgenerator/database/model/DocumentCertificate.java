@@ -1,6 +1,6 @@
 package io.cronica.api.pdfgenerator.database.model;
 
-import io.cronica.api.pdfgenerator.component.dto.DataJsonDto;
+import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -22,7 +22,7 @@ import javax.validation.constraints.Size;
         @Index(columnList = "issue_timestamp", name = "ix_document_certificates_issue_timestamp")
 })
 @TypeDefs( {
-        @TypeDef(name = "DataJsonDtoType", typeClass = DataJsonDto.class)
+        @TypeDef(name = "DataJsonDtoType", typeClass = DataJsonDTO.class)
 })
 public class DocumentCertificate {
 

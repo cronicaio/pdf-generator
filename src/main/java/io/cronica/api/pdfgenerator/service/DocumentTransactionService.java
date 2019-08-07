@@ -2,7 +2,7 @@ package io.cronica.api.pdfgenerator.service;
 
 import org.web3j.tx.Contract;
 
-public interface DocumentTransaction {
+public interface DocumentTransactionService {
 
     /**
      * Load document from Quorum network in object-wrapper.

@@ -28,14 +28,14 @@ import java.lang.reflect.InvocationTargetException;
 
 @Slf4j
 @Service
-public class DocumentTransactionImpl implements DocumentTransaction {
+public class DocumentTransactionServiceImpl implements DocumentTransactionService {
 
     private final Web3j web3j;
 
     private final Credentials credentials;
 
     @Autowired
-    public DocumentTransactionImpl(
+    public DocumentTransactionServiceImpl(
             @Qualifier("initWeb3j") Web3j web3j,
             Credentials credentials
     ) {
@@ -44,7 +44,7 @@ public class DocumentTransactionImpl implements DocumentTransaction {
     }
 
     /**
-     * @see DocumentTransaction#loadDocument(Class, String)
+     * @see DocumentTransactionService#loadDocument(Class, String)
      */
     @Override
     public <T extends Contract> T loadDocument(final Class<T> contractType, final String documentAddress) {
@@ -87,7 +87,7 @@ public class DocumentTransactionImpl implements DocumentTransaction {
     }
 
     /**
-     * @see DocumentTransaction#getBankCode(String)
+     * @see DocumentTransactionService#getBankCode(String)
      */
     @Override
     public String getBankCode(final String documentAddress) {
@@ -116,7 +116,7 @@ public class DocumentTransactionImpl implements DocumentTransaction {
     }
 
     /**
-     * @see DocumentTransaction#getHash(String) 
+     * @see DocumentTransactionService#getHash(String)
      */
     @Override
     public String getHash(final String documentAddress) {
@@ -142,7 +142,7 @@ public class DocumentTransactionImpl implements DocumentTransaction {
     }
 
     /**
-     * @see DocumentTransaction#getTemplateID(String)
+     * @see DocumentTransactionService#getTemplateID(String)
      */
     @Override
     public String getTemplateID(final String documentAddress) {
@@ -168,7 +168,7 @@ public class DocumentTransactionImpl implements DocumentTransaction {
     }
 
     /**
-     * @see DocumentTransaction#getStructuredData(String)
+     * @see DocumentTransactionService#getStructuredData(String)
      */
     @Override
     public String getStructuredData(final String documentAddress) {

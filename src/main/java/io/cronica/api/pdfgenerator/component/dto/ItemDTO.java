@@ -14,16 +14,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * Class that represents fields and tables in HTML template.
+ *
+ * @author Dmytro Kohut
+ *
+ * @version 1.0
+ */
 @Setter
 @Getter
 @ToString
-public class DataJsonDto implements UserType, Serializable {
+public class ItemDTO implements UserType, Serializable {
 
-    private Map<String, Object> fields;
+    private List<FieldDTO> fields;
 
-    private Map<String, List<List<Object>>> tables;
+    private List<TableDTO> tables;
 
     @Override
     public int[] sqlTypes() {
@@ -31,8 +37,8 @@ public class DataJsonDto implements UserType, Serializable {
     }
 
     @Override
-    public Class<DataJsonDto> returnedClass() {
-        return DataJsonDto.class;
+    public Class returnedClass() {
+        return ItemDTO.class;
     }
 
     @Override
@@ -46,7 +52,7 @@ public class DataJsonDto implements UserType, Serializable {
 
     @Override
     public int hashCode(final Object x) throws HibernateException {
-        return ((DataJsonDto) x).toString().hashCode();
+        return x.hashCode();
     }
 
     @Override
@@ -118,15 +124,16 @@ public class DataJsonDto implements UserType, Serializable {
     }
 
     @Override
-    public Object assemble(final Serializable cached, final Object owner)
+    public Object assemble(
+            final Serializable cached, final Object owner)
             throws HibernateException {
         return this.deepCopy(cached);
     }
 
     @Override
     public Object replace(
-            final Object original, final Object target,
-            final Object owner) throws HibernateException {
+            final Object original, final Object target, final Object owner)
+            throws HibernateException {
         return this.deepCopy(original);
     }
 }
