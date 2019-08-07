@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: pdf-generator
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_ENDPOINT}
+      profile: prod
+    vault:
+      host: ${HASHICORP_VAULT_HOST}
+      port: 8200
+      scheme: http
+      connection-timeout: 5000
+      read-timeout: 15000
+      kv:
+        enabled: true
+        backend: secret
+        profile-separator: "/"
+      authentication: approle
+      app-role:
+        role-id: ${HASHICORP_VAULT_APPROLE_ROLE_ID}
+        secret-id: ${HASHICORP_VAULT_APPROLE_SECRET_ID}

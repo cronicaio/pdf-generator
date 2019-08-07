@@ -16,4 +16,6 @@ public class BlockchainConfig {
     private String walletPrivateKey;
 
     private String quorumNodeEndpoint;
+
+    private String issuersRegistryContractAddress;
 }
