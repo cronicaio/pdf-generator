@@ -108,7 +108,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
             throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
         }
-        final InputStream signedDocument = this.cronicaCAAdapter.signDocument(new ByteArrayInputStream(buffer));
+        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(new ByteArrayInputStream(buffer));
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
 
         return Document.newInstance(fileName, signedDocument);
@@ -129,7 +129,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final InputStream inputStream = templateHandler.generatePDFDocument();
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-        final InputStream signedDocument = this.cronicaCAAdapter.signDocument(inputStream);
+        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(inputStream);
 
         return Document.newInstance(fileName, signedDocument);
     }

@@ -9,7 +9,7 @@ public interface CronicaCAAdapter {
      *
      * @param documentInputStream
      *              - document as {@link InputStream} object
-     * @return signed document as {@link InputStream} object
+     * @return signed document as array of bytes
      */
-    InputStream signDocument(InputStream documentInputStream);
+    byte[] signDocument(InputStream documentInputStream);
 }

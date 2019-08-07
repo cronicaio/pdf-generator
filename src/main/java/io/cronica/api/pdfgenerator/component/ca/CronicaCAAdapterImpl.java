@@ -30,7 +30,7 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
      * @see CronicaCAAdapter#signDocument(InputStream)
      */
     @Override
-    public InputStream signDocument(final InputStream documentInputStream) {
+    public byte[] signDocument(final InputStream documentInputStream) {
         log.info("[ADAPTER] send request for signing document");
         final String url = this.cronicaCAEndpoint + SIGN_DOCUMENT_URI;
 
@@ -57,6 +57,6 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
         }
 
         log.info("[ADAPTER] document successfully signed");
-        return new ByteArrayInputStream(signedDocument);
+        return signedDocument;
     }
 }

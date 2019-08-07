@@ -2,16 +2,14 @@ package io.cronica.api.pdfgenerator.component.entity;
 
 import lombok.Getter;
 
-import java.io.InputStream;
-
 @Getter
 public class Document {
 
     private String fileName;
 
-    private InputStream file;
+    private byte[] file;
 
-    public static Document newInstance(final String fileName, final InputStream file) {
+    public static Document newInstance(final String fileName, final byte[] file) {
         final Document document = new Document();
         document.fileName = fileName;
         document.file = file;
