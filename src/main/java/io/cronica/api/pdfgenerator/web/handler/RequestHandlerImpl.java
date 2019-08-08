@@ -35,6 +35,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
+        log.info("[SERVICE] new request: {}", serverRequest);
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))
                 .map(pdfDocumentService::generatePDFDocument)
                 .flatMap(this::generateResponse);

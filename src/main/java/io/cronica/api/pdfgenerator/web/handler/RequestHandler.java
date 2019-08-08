@@ -15,7 +15,7 @@ public interface RequestHandler {
      * Generate PDF document and return response client.
      *
      * @param serverRequest
-     *          - {@link ServerRequest} object with client's request data
+     *          - {@link ServerRequest} object with request data
      * @return {@link ServerResponse} object with response data wrapped by {@link Mono} object
      */
     Mono<ServerResponse> generatePDF(ServerRequest serverRequest);

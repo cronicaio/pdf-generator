@@ -14,10 +14,14 @@ import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 
 @Slf4j
@@ -157,5 +161,22 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final TemplateContract templateContract = this.templateTransactionService.loadTemplate(templateID);
 
         return this.templateTransactionService.getFileTypeOfTemplate(templateContract);
+    }
+
+    /**
+     * Create basic folders for PDF documents, templates and QR codes.
+     */
+    @PostConstruct
+    public void initFolders() throws IOException {
+        final File[] directories = new File[] {
+                new File("./temp/pdf/"),
+                new File("./temp/qr/"),
+                new File("./temp/template/"),
+                new File("./temp/html/")
+        };
+
+        for (File directory : directories) {
+            FileUtils.forceMkdir(directory);
+        }
     }
 }
