@@ -5,8 +5,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import io.cronica.api.pdfgenerator.configuration.Beans;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.support.GenericWebApplicationContext;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
@@ -23,7 +23,7 @@ public class Repeater {
 
     private final Beans beans;
 
-    private final GenericWebApplicationContext context;
+    private final GenericApplicationContext context;
 
     public <T, R> R apply(Function<T, R> func, T param) {
         final CountDownLatch countDownLatch = new CountDownLatch(TRIALS);
