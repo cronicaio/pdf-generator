@@ -1,6 +1,5 @@
 package io.cronica.api.pdfgenerator.service;
 
-import io.cronica.api.pdfgenerator.component.entity.Template;
 import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
 
 public interface TemplateTransactionService {
@@ -13,24 +12,6 @@ public interface TemplateTransactionService {
      * @return {@link TemplateContract} object
      */
     TemplateContract loadTemplate(String contractAddress);
-
-    /**
-     * Return address of the smart-contract which have specified ID in TemplateRegistry.
-     *
-     * @param id
-     *          - index of a template in array of templates
-     * @return address of the smart-contract
-     */
-    String getTemplateAddressFromRegistry(Integer id);
-
-    /**
-     * Return {@link Template} object with information about template in TemplateRegistry.
-     *
-     * @param index
-     *          - index of template in array of templates
-     * @return {@link Template} object
-     */
-    Template getTemplate(Integer index);
 
     /**
      * Return main content of template.

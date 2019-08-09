@@ -30,15 +30,10 @@ public class HTMLUtils {
 
         for (File file : folder.listFiles()) {
             final byte[] fileAsByteArray = FileUtils.readFileToByteArray(file);
+            final String encodedContent = Base64.getEncoder().encodeToString(fileAsByteArray);
             final String fontType = getFontType(file.getName());
             final String fontFamily = getFontFamily(file.getName(), fontType);
-            fontList.add(
-                    new Font(
-                            fontFamily,
-                            Base64.getEncoder().encodeToString(fileAsByteArray),
-                            fontType
-                    )
-            );
+            fontList.add( new Font(fontFamily, encodedContent, fontType) );
         }
 
         return fontList;
@@ -121,13 +116,9 @@ public class HTMLUtils {
         log.info("[HTML] replacing variables in HTML document with values");
         String fullDocument = htmlDocument.html();
         for (String key : parameters.keySet()) {
-            if ( !(parameters.get(key) instanceof Collection<?>)
-                    && fullDocument.contains(key)) {
-                fullDocument = StringUtils.replace(
-                        fullDocument,
-                        key,
-                        parameters.get(key).toString()
-                );
+            if ( !(parameters.get(key) instanceof Collection<?>) && fullDocument.contains(key)) {
+                final String parameter = parameters.get(key).toString();
+                fullDocument = StringUtils.replace(fullDocument, key, parameter);
             }
         }
         log.info("[HTML] variables in HTML document have been replaced with values");

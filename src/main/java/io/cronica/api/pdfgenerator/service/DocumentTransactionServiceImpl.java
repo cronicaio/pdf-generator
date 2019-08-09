@@ -80,8 +80,8 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
             );
         }
         catch (IllegalAccessException
-                | InstantiationException
-                | InvocationTargetException ex) {
+               | InstantiationException
+               | InvocationTargetException ex) {
             throw new RuntimeException("Exception during object instantiation", ex);
         }
     }
@@ -105,7 +105,6 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
             catch (NullPointerException e) {
                 log.info("[BLOCKCHAIN] document with '{}' address does not found", documentAddress);
                 return null;
-
             }
             catch (Exception e) {
                 throw new RuntimeException(e);
