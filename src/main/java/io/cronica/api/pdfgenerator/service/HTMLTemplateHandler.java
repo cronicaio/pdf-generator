@@ -1,7 +1,9 @@
 package io.cronica.api.pdfgenerator.service;
 
+import com.amazonaws.util.IOUtils;
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
+import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.entity.Font;
 import io.cronica.api.pdfgenerator.component.entity.Issuer;
 import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
@@ -20,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
@@ -164,12 +167,13 @@ public class HTMLTemplateHandler implements TemplateHandler {
      */
     @Override
     public InputStream generatePDFDocument() throws Exception {
-        final String fileName = "DC-" + this.documentID + ".pdf";
+        final String uuid = UUID.randomUUID().toString();
+        final String fileName = "DC-" + uuid + ".pdf";
         final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
 
         try {
             log.info("[SERVICE] begin generating a PDF document using HTML template");
-            final File preparedTemplate = prepareTemplateForGenerating(document.getName());
+            final File preparedTemplate = prepareTemplateForGenerating(uuid);
             importFontsInto(preparedTemplate);
             insertQrCodeIfNeeded();
             final File headerFile = findHeaderFile(preparedTemplate.getAbsolutePath());
@@ -187,7 +191,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
                 deleteFile(footerFile);
             }
 
-            log.info("[SERVICE] PDF document with id '{}' is generated using HTML template", this.documentID);
+            log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
             return new FileInputStream(document);
         }
         finally {
@@ -207,11 +211,11 @@ public class HTMLTemplateHandler implements TemplateHandler {
         }
     }
 
-    private File prepareTemplateForGenerating(final String documentName) throws IOException {
+    private File prepareTemplateForGenerating(final String uuid) throws IOException {
         final Map<String, Object> parameters = DocumentUtils.convertJsonStringToMap(this.dataJson);
         final String newTemplateContent = HTMLUtils.modifyTemplate(parameters, this.template);
 
-        final File document = new File("./template/" + this.templateID + "/" + documentName + ".html");
+        final File document = new File("./template/" + this.templateID + "/" + uuid + ".html");
         FileUtils.touch(document);
 
         try (final BufferedWriter writer = new BufferedWriter(new FileWriter(document))) {
