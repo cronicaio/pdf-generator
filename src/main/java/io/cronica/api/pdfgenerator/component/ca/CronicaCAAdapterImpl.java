@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -37,10 +38,8 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
 
         final HttpHeaders httpHeaders = formHeaders();
         final MultiValueMap<String, Object> body = formBody(documentInputStream);
-        final byte[] signedDocument = sendRequest(url, body, httpHeaders);
 
-        log.info("[ADAPTER] document successfully signed");
-        return signedDocument;
+        return sendRequest(url, body, httpHeaders);
     }
 
     private HttpHeaders formHeaders() {
@@ -65,13 +64,22 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
     private byte[] sendRequest(final String url, final MultiValueMap<String, Object> body, final HttpHeaders httpHeaders) {
         final RestTemplate restTemplate = new RestTemplate();
         final HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, httpHeaders);
-        final ResponseEntity<byte[]> responseEntity = restTemplate.postForEntity(url, requestEntity, byte[].class);
-        final byte[] signedDocument = responseEntity.getBody();
 
-        if (signedDocument == null) {
-            log.info("[ADAPTER] returned empty response");
-            return null;
+        byte[] signedDocument = new byte[]{};
+        try {
+            final ResponseEntity<byte[]> responseEntity = restTemplate.postForEntity(url, requestEntity, byte[].class);
+            if (responseEntity.getBody() != null) {
+                signedDocument = responseEntity.getBody();
+                log.info("[ADAPTER] document successfully signed");
+            }
+            else {
+                log.debug("[ADAPTER] empty body in response");
+            }
         }
+        catch (HttpServerErrorException ex) {
+            log.error("[ADAPTER] exception on Cronica CA", ex);
+        }
+
         return signedDocument;
     }
 }
