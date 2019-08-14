@@ -6,12 +6,15 @@ import static io.cronica.api.pdfgenerator.utils.Constants.GAS_PRICE;
 import io.cronica.api.pdfgenerator.component.wrapper.NonStructuredDoc;
 import io.cronica.api.pdfgenerator.component.wrapper.StructuredDoc;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
+import io.cronica.api.pdfgenerator.utils.DeflateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.DynamicBytes;
 import org.web3j.abi.datatypes.Utf8String;
+import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.abi.datatypes.generated.Uint64;
 import org.web3j.abi.datatypes.generated.Uint8;
@@ -22,9 +25,11 @@ import org.web3j.tuples.generated.Tuple8;
 import org.web3j.tx.Contract;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
+import org.web3j.utils.Numeric;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -122,8 +127,8 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
         log.info("[BLOCKCHAIN] get hash of document with '{}' address", documentAddress);
         try {
             final NonStructuredDoc nsDoc = loadDocument(NonStructuredDoc.class, documentAddress);
-            final Tuple8<Utf8String, Utf8String, Utf8String, Uint64, Uint64, Utf8String, Utf8String, Uint8> data = nsDoc.getData().send();
-            final String hash = data.getValue6().getValue();
+            final Tuple8<Utf8String, Utf8String, Utf8String, Uint64, Uint64, Bytes32, Utf8String, Uint8> data = nsDoc.getData().send();
+            final String hash = Numeric.toHexString(data.getValue6().getValue());
             log.info("[BLOCKCHAIN] hash of document with '{}' address has been retrieved", documentAddress);
             return hash;
         }
@@ -174,13 +179,22 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
         log.info("[BLOCKCHAIN] get structured data of document with '{}' address", documentAddress);
         try {
             final StructuredDoc structuredDoc = loadDocument(StructuredDoc.class, documentAddress);
-            final StringBuilder sb = new StringBuilder();
-            final int length = structuredDoc.getSizeOfStructuredData().send().getValue().intValue();
-            for (int i = 0; i < length; i++) {
-                sb.append(structuredDoc.structuredData(new Uint256(i)).send().getValue());
+            final DynamicBytes bytes = structuredDoc.structuredData().send();
+            String data;
+            if (bytes == null) {
+                final StringBuilder sb = new StringBuilder();
+                final int length = structuredDoc.getSizeOfStructuredData().send().getValue().intValue();
+                for (int i = 0; i < length; i++) {
+                    sb.append(structuredDoc.structuredDataOld(new Uint256(i)).send().getValue());
+                }
+                data = sb.toString();
+            }
+            else {
+                final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+                data = new String(decompressedData, StandardCharsets.UTF_8);
             }
             log.info("[BLOCKCHAIN] structured data of document with '{}' address has been retrieved", documentAddress);
-            return sb.toString();
+            return data;
         }
         catch (NullPointerException ex) {
             log.info("[BLOCKCHAIN] document with {} address does not found", documentAddress);

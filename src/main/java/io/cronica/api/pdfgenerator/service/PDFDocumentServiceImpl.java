@@ -169,10 +169,10 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     @PostConstruct
     public void initFolders() throws IOException {
         final File[] directories = new File[] {
-                new File("./temp/pdf/"),
-                new File("./temp/qr/"),
-                new File("./temp/template/"),
-                new File("./temp/html/")
+                new File("temp/pdf/"),
+                new File("temp/qr/"),
+                new File("temp/template/"),
+                new File("temp/html/")
         };
 
         for (File directory : directories) {
