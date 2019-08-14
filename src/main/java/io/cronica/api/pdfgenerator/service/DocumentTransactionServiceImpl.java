@@ -6,7 +6,7 @@ import static io.cronica.api.pdfgenerator.utils.Constants.GAS_PRICE;
 import io.cronica.api.pdfgenerator.component.wrapper.NonStructuredDoc;
 import io.cronica.api.pdfgenerator.component.wrapper.StructuredDoc;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
-import io.cronica.api.pdfgenerator.utils.DeflateUtils;
+import io.cronica.api.pdfgenerator.utils.LZ4Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -190,7 +190,7 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
                 data = sb.toString();
             }
             else {
-                final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+                final byte[] decompressedData = LZ4Utils.decompress(bytes.getValue());
                 data = new String(decompressedData, StandardCharsets.UTF_8);
             }
             log.info("[BLOCKCHAIN] structured data of document with '{}' address has been retrieved", documentAddress);
