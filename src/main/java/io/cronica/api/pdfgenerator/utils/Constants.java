@@ -22,9 +22,9 @@ public interface Constants {
     String DEFAULT_FONT_TYPE = "font/truetype";
 
     String PNG_FILE_EXTENSION = ".png";
-    String PATH_TO_PDF_DOCUMENTS = "./temp/pdf/";
-    String PATH_TO_FOLDER_WITH_QR_CODE = "./temp/qr/";
-    String DEFAULT_FOOTER_CONTENT_FILE_PATH = "./template/footer/DefaultFooterTemplate.html";
+    String PATH_TO_PDF_DOCUMENTS = "temp/pdf/";
+    String PATH_TO_FOLDER_WITH_QR_CODE = "temp/qr/";
+    String DEFAULT_FOOTER_CONTENT_FILE_PATH = "template/footer/DefaultFooterTemplate.html";
 
     String SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL = "/#/searchByIdStructured/";
 

@@ -6,6 +6,7 @@ import static io.cronica.api.pdfgenerator.utils.Constants.GAS_PRICE;
 import io.cronica.api.pdfgenerator.component.wrapper.NonStructuredDoc;
 import io.cronica.api.pdfgenerator.component.wrapper.StructuredDoc;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
+import io.cronica.api.pdfgenerator.utils.DeflateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -179,17 +180,20 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
         log.info("[BLOCKCHAIN] get structured data of document with '{}' address", documentAddress);
         try {
             final StructuredDoc structuredDoc = loadDocument(StructuredDoc.class, documentAddress);
-            DynamicBytes bytes = structuredDoc.structuredData().send();
+            final DynamicBytes bytes = structuredDoc.structuredData().send();
+            String data;
             if (bytes == null) {
                 final StringBuilder sb = new StringBuilder();
                 final int length = structuredDoc.getSizeOfStructuredData().send().getValue().intValue();
                 for (int i = 0; i < length; i++) {
                     sb.append(structuredDoc.structuredDataOld(new Uint256(i)).send().getValue());
                 }
-                log.info("[BLOCKCHAIN] structured data of document with '{}' address has been retrieved", documentAddress);
-                return sb.toString();
+                data = sb.toString();
             }
-            String data = new String(bytes.getValue(), StandardCharsets.UTF_8);
+            else {
+                final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+                data = new String(decompressedData, StandardCharsets.UTF_8);
+            }
             log.info("[BLOCKCHAIN] structured data of document with '{}' address has been retrieved", documentAddress);
             return data;
         }
