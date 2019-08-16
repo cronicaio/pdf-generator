@@ -16,14 +16,19 @@ public class LZ4Utils {
      * @return decompressed data
      */
     public static byte[] decompress(final byte[] input) {
-        log.debug("[LZ4] size of data before compression = {}", input.length);
+        log.debug("[LZ4] size of data before decompression = {}", input.length);
+        if (input.length == 0) {
+            log.debug("[LZ4] empty array. Skip decompression.");
+            return input;
+        }
+
         final BufferedInputStream is = new BufferedInputStream(new ByteArrayInputStream(input));
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (FramedLZ4CompressorInputStream lz4In = new FramedLZ4CompressorInputStream(is)) {
-            final byte[] bufferD = new byte[1024];
-            int nD = 0;
-            while (-1 != (nD = lz4In.read(bufferD))) {
-                baos.write(bufferD, 0, nD);
+            final byte[] buffer = new byte[1024];
+            int n = 0;
+            while (-1 != (n = lz4In.read(buffer))) {
+                baos.write(buffer, 0, n);
             }
             baos.close();
 
