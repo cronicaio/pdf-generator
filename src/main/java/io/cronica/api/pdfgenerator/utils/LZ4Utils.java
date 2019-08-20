@@ -24,12 +24,15 @@ public class LZ4Utils {
 
         final BufferedInputStream is = new BufferedInputStream(new ByteArrayInputStream(input));
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (FramedLZ4CompressorInputStream lz4In = new FramedLZ4CompressorInputStream(is)) {
-            final byte[] buffer = new byte[1024];
+        try {
+            final FramedLZ4CompressorInputStream lz4In = new FramedLZ4CompressorInputStream(is);
+            final byte[] buffer = new byte[1025];       // odd number to prevent division by zero
             int n = 0;
             while (-1 != (n = lz4In.read(buffer))) {
                 baos.write(buffer, 0, n);
             }
+            lz4In.close();
+            is.close();
             baos.close();
 
             final byte[] decompressedData = baos.toByteArray();
