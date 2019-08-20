@@ -16,7 +16,7 @@ public class LZ4Utils {
      * @return decompressed data
      */
     public static byte[] decompress(final byte[] input) {
-        log.debug("[LZ4] size of data before decompression = {}", input.length);
+        log.info("[LZ4] size of data before decompression = {}", input.length);
         if (input.length == 0) {
             log.debug("[LZ4] empty array. Skip decompression.");
             return input;
@@ -33,7 +33,7 @@ public class LZ4Utils {
             baos.close();
 
             final byte[] decompressedData = baos.toByteArray();
-            log.debug("[LZ4] size of decompressed data = {}", decompressedData.length);
+            log.info("[LZ4] size of decompressed data = {}", decompressedData.length);
             return decompressedData;
         }
         catch (IOException ex) {
