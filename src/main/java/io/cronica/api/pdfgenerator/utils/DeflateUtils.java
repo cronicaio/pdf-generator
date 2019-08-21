@@ -1,46 +1,48 @@
 package io.cronica.api.pdfgenerator.utils;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream;
+import org.apache.commons.compress.compressors.deflate.DeflateCompressorInputStream;
 
 import java.io.*;
 
 @Slf4j
-public class LZ4Utils {
+public class DeflateUtils {
 
     /**
-     * Decompress data, compressed using 'LZ4' algorithm.
+     * Decompress data, compressed using 'DEFLATE' algorithm.
      *
      * @param input
      *          - array of bytes to decompress
      * @return decompressed data
      */
     public static byte[] decompress(final byte[] input) {
-        log.info("[LZ4] size of data before decompression = {}", input.length);
+        log.info("[DEFLATE] size of data before decompression = {}", input.length);
         if (input.length == 0) {
-            log.debug("[LZ4] empty array. Skip decompression.");
+            log.debug("[DEFLATE] empty array. Skip decompression.");
             return input;
         }
 
-        final BufferedInputStream is = new BufferedInputStream(new ByteArrayInputStream(input));
+        final InputStream is = new ByteArrayInputStream(input);
+        final BufferedInputStream bis = new BufferedInputStream(is);
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            final FramedLZ4CompressorInputStream lz4In = new FramedLZ4CompressorInputStream(is);
+            final DeflateCompressorInputStream defIn = new DeflateCompressorInputStream(bis);
             final byte[] buffer = new byte[1024];
             int n = 0;
-            while (-1 != (n = lz4In.read(buffer))) {
+            while (-1 != (n = defIn.read(buffer))) {
                 baos.write(buffer, 0, n);
             }
-            lz4In.close();
+            defIn.close();
+            bis.close();
             is.close();
             baos.close();
 
             final byte[] decompressedData = baos.toByteArray();
-            log.info("[LZ4] size of decompressed data = {}", decompressedData.length);
+            log.info("[DEFLATE] size of decompressed data = {}", decompressedData.length);
             return decompressedData;
         }
         catch (IOException ex) {
-            log.error("[LZ4] exception while decompressing data", ex);
+            log.error("[DEFLATE] exception while decompressing data", ex);
             throw new RuntimeException("Exception while decompressing data", ex);
         }
     }
