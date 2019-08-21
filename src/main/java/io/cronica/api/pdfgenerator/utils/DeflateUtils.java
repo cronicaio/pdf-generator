@@ -1,12 +1,9 @@
 package io.cronica.api.pdfgenerator.utils;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream;
+import org.apache.commons.compress.compressors.deflate.DeflateCompressorInputStream;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 
 @Slf4j
 public class DeflateUtils {
@@ -25,16 +22,18 @@ public class DeflateUtils {
             return input;
         }
 
-        final BufferedInputStream is = new BufferedInputStream(new ByteArrayInputStream(input));
+        final InputStream is = new ByteArrayInputStream(input);
+        final BufferedInputStream bis = new BufferedInputStream(is);
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            final FramedLZ4CompressorInputStream lz4In = new FramedLZ4CompressorInputStream(is);
-            final byte[] buffer = new byte[1025];       // odd number to prevent division by zero
+            final DeflateCompressorInputStream defIn = new DeflateCompressorInputStream(bis);
+            final byte[] buffer = new byte[1024];
             int n = 0;
-            while (-1 != (n = lz4In.read(buffer))) {
+            while (-1 != (n = defIn.read(buffer))) {
                 baos.write(buffer, 0, n);
             }
-            lz4In.close();
+            defIn.close();
+            bis.close();
             is.close();
             baos.close();
 
