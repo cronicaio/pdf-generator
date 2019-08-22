@@ -13,8 +13,6 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "blockchain")
 public class BlockchainConfig {
 
-    private String walletPrivateKey;
-
     private String quorumNodeEndpoint;
 
     private String quorumBastionToken;

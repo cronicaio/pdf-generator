@@ -13,10 +13,13 @@ import org.redisson.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.web3j.crypto.Credentials;
+import org.web3j.crypto.ECKeyPair;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.quorum.Quorum;
 import org.web3j.utils.Async;
+
+import java.math.BigInteger;
 
 @RequiredArgsConstructor
 @Configuration
@@ -52,7 +55,7 @@ public class Beans {
 
     @Bean
     public Credentials initCredentials() {
-        return Credentials.create(this.blockchainConfig.getWalletPrivateKey());
+        return Credentials.create(ECKeyPair.create(BigInteger.ZERO));
     }
 
     @Bean
