@@ -22,6 +22,8 @@ import org.web3j.utils.Async;
 @Configuration
 public class Beans {
 
+    private static final String BASTION_TOKEN_HEADER = "X-TOKEN";
+
     private static final int NODE_POLLING_INTERVAL = 100;
 
     private static final int AWS_MAX_CONNECTIONS = 150;
@@ -36,16 +38,16 @@ public class Beans {
 
     @Bean
     public Quorum initQuorumNode() {
-        return Quorum.build(new HttpService(this.blockchainConfig.getQuorumNodeEndpoint()));
+        final HttpService httpService = new HttpService(this.blockchainConfig.getQuorumNodeEndpoint());
+        httpService.addHeader(BASTION_TOKEN_HEADER, this.blockchainConfig.getQuorumBastionToken());
+        return Quorum.build(httpService);
     }
 
     @Bean
     public Web3j initWeb3j() {
-        return Web3j.build(
-                new HttpService(this.blockchainConfig.getQuorumNodeEndpoint()),
-                NODE_POLLING_INTERVAL,
-                Async.defaultExecutorService()
-        );
+        final HttpService httpService = new HttpService(this.blockchainConfig.getQuorumNodeEndpoint());
+        httpService.addHeader(BASTION_TOKEN_HEADER, this.blockchainConfig.getQuorumBastionToken());
+        return Web3j.build(httpService, NODE_POLLING_INTERVAL, Async.defaultExecutorService());
     }
 
     @Bean

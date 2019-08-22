@@ -17,5 +17,7 @@ public class BlockchainConfig {
 
     private String quorumNodeEndpoint;
 
+    private String quorumBastionToken;
+
     private String issuersRegistryContractAddress;
 }
