@@ -3,8 +3,9 @@ package io.cronica.api.pdfgenerator.component.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Utf8String;
-import org.web3j.tuples.generated.Tuple5;
+import org.web3j.tuples.generated.Tuple6;
 
 @Setter
 @Getter
@@ -23,9 +24,11 @@ public class Issuer {
 
     private String frontEndLink;
 
+    private String issuerAddress;
+
     public static Issuer newInstance(
             final String bankCode,
-            final Tuple5<Utf8String, Utf8String, Utf8String, Utf8String, Utf8String> issuerTuple
+            final Tuple6<Utf8String, Utf8String, Utf8String, Utf8String, Utf8String, Address> issuerTuple
     ) {
         final Issuer issuer = new Issuer();
         issuer.bankCode = bankCode;
@@ -34,6 +37,7 @@ public class Issuer {
         issuer.verifierApiLink = issuerTuple.getValue3().getValue();
         issuer.issuerApiLink = issuerTuple.getValue4().getValue();
         issuer.frontEndLink = issuerTuple.getValue5().getValue();
+        issuer.issuerAddress = issuerTuple.getValue6().getValue();
 
         return issuer;
     }
