@@ -8,9 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.protocol.exceptions.TransactionException;
-import org.web3j.tuples.generated.Tuple5;
+import org.web3j.tuples.generated.Tuple6;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,7 +30,7 @@ public class IssuerRegistryTransactionServiceImpl implements IssuerRegistryTrans
     public Issuer getIssuerByBankCode(final String bankCode) {
         log.info("[BLOCKCHAIN] get issuer with {} bank code", bankCode);
         try {
-            final Tuple5<Utf8String, Utf8String, Utf8String, Utf8String, Utf8String> issuerTuple =
+            final Tuple6<Utf8String, Utf8String, Utf8String, Utf8String, Utf8String, Address> issuerTuple =
                     this.issuersRegistry.getIssuer(new Utf8String(bankCode)).send();
             log.info("[BLOCKCHAIN] found issuer with {} bank code", bankCode);
             return Issuer.newInstance(bankCode, issuerTuple);
