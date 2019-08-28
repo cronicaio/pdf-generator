@@ -1,5 +1,5 @@
-#Build Java project within gradle
-FROM gradle:5.2.1-alpine
+# Build Java project within gradle
+FROM gradle:5.6.0-jdk11
 
 USER root
 
@@ -7,7 +7,7 @@ ADD . ./
 
 RUN gradle build
 
-#Copy compiled Java application and run within Ubuntu Container with Java
+# Copy compiled Java application and run within Ubuntu Container with Java
 FROM ubuntu:18.04
 
 RUN mkdir ./app/
@@ -26,7 +26,7 @@ RUN dpkg -i libpng12-0_1.2.54-1ubuntu1_amd64.deb
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
 RUN DEBIAN_FRONTEND=noninteractive add-apt-repository ppa:openjdk-r/ppa
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install openjdk-8-jdk
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install openjdk-11-jdk
 RUN DEBIAN_FRONTEND=noninteractive update-alternatives --config java
 
 # Set Up encoding
