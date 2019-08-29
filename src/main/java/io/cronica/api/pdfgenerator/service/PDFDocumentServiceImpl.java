@@ -7,18 +7,23 @@ import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
 import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
+import io.cronica.api.pdfgenerator.configuration.Beans;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
 import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
+import io.cronica.api.pdfgenerator.utils.ChaCha20Utils;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +35,7 @@ import java.io.InputStream;
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final String PDF_DOCUMENT_TYPE = "pdf";
+    private static final String ALGORITHM = "ChaCha20";
 
     private final Repeater repeater;
 
@@ -126,16 +132,47 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
-    private Document generateStructuredDocument(final DocumentCertificate docCertificate, final RedisDocument redisDocument) throws Exception {
-        final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCertificate);
-        templateHandler.generateTemplate();
-        templateHandler.downloadAdditionalFiles();
-        final InputStream inputStream = templateHandler.generatePDFDocument();
+    private Document generateStructuredDocument(
+            final DocumentCertificate docCertificate, final RedisDocument redisDocument) throws Exception {
+
+        InputStream documentInputStream;
+
+        // if PDF is cached to Redis then return it, generate it otherwise
+        if ( this.redisDAO.exists(redisDocument.getDocumentID()) ) {
+            final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
+
+            // decrypt cached PDF
+            final byte[] decryptedPDF = decrypt(cachedPDF);
+            documentInputStream = new ByteArrayInputStream(decryptedPDF);
+        }
+        else {
+            final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCertificate);
+            templateHandler.generateTemplate();
+            templateHandler.downloadAdditionalFiles();
+            documentInputStream = templateHandler.generatePDFDocument();
+
+            // encrypt PDF before caching to Redis
+            final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
+            final byte[] encryptedDocument = encrypt(documentBytes);
+            this.redisDAO.savePDF(encryptedDocument, redisDocument.getDocumentID());
+        }
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(inputStream);
+        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentInputStream);
 
         return Document.newInstance(fileName, signedDocument);
+    }
+
+    private byte[] decrypt(final byte[] ciphertext) {
+        final byte[] chacha20Key = Beans.chacha20SecretKey;
+        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
+        return ChaCha20Utils.decrypt(ciphertext, secretKey);
+    }
+
+    private byte[] encrypt(final byte[] plaintext) {
+        final byte[] chacha20Key = Beans.chacha20SecretKey;
+        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
+        return ChaCha20Utils.encrypt(plaintext, secretKey);
     }
 
     private TemplateHandler getTemplateHandlerAccordingToFileType(final DocumentCertificate dc) {

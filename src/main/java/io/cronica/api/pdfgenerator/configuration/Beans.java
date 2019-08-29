@@ -10,13 +10,19 @@ import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.codec.KryoCodec;
 import org.redisson.config.Config;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.web3j.crypto.Credentials;
+import org.web3j.crypto.ECKeyPair;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.quorum.Quorum;
 import org.web3j.utils.Async;
+
+import javax.annotation.PostConstruct;
+import java.math.BigInteger;
+import java.util.Base64;
 
 @RequiredArgsConstructor
 @Configuration
@@ -28,11 +34,16 @@ public class Beans {
     private static final int AWS_CONNECTION_TIMEOUT = 20_000;
     private static final int AWS_MAX_ERROR_RETRY = 5;
 
+    public static byte[] chacha20SecretKey;
+
     private final RedisConfig redisConfig;
 
     private final AWSProperties awsProperties;
 
     private final BlockchainConfig blockchainConfig;
+
+    @Value("{chacha20.key}")
+    private String chacha20SecretKeyBase64;
 
     @Bean
     public Quorum initQuorumNode() {
@@ -50,7 +61,7 @@ public class Beans {
 
     @Bean
     public Credentials initCredentials() {
-        return Credentials.create(this.blockchainConfig.getWalletPrivateKey());
+        return Credentials.create(ECKeyPair.create(BigInteger.ZERO));
     }
 
     @Bean
@@ -77,5 +88,10 @@ public class Beans {
                             .withMaxErrorRetry(AWS_MAX_ERROR_RETRY)
                 )
                 .build();
+    }
+
+    @PostConstruct
+    public void initChaCha20SecretKey() {
+        chacha20SecretKey = Base64.getDecoder().decode(this.chacha20SecretKeyBase64);
     }
 }
