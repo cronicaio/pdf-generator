@@ -92,6 +92,6 @@ public class Beans {
 
     @PostConstruct
     public void initChaCha20SecretKey() {
-        chacha20SecretKey = Base64.getDecoder().decode(this.chacha20SecretKeyBase64);
+        chacha20SecretKey = Base64.getMimeDecoder().decode(this.chacha20SecretKeyBase64);
     }
 }
