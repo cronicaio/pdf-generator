@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -118,7 +117,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
             throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
         }
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(new ByteArrayInputStream(buffer));
+        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(buffer);
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
 
         return Document.newInstance(fileName, signedDocument);
@@ -135,30 +134,29 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     private Document generateStructuredDocument(
             final DocumentCertificate docCertificate, final RedisDocument redisDocument) throws Exception {
 
-        InputStream documentInputStream;
+        byte[] documentBytes;
 
         // if PDF is cached to Redis then return it, generate it otherwise
         if ( this.redisDAO.exists(redisDocument.getDocumentID()) ) {
             final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
 
             // decrypt cached PDF
-            final byte[] decryptedPDF = decrypt(cachedPDF);
-            documentInputStream = new ByteArrayInputStream(decryptedPDF);
+            documentBytes = decrypt(cachedPDF);
         }
         else {
             final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCertificate);
             templateHandler.generateTemplate();
             templateHandler.downloadAdditionalFiles();
-            documentInputStream = templateHandler.generatePDFDocument();
+            final InputStream documentInputStream = templateHandler.generatePDFDocument();
 
             // encrypt PDF before caching to Redis
-            final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
+            documentBytes = IOUtils.toByteArray(documentInputStream);
             final byte[] encryptedDocument = encrypt(documentBytes);
             this.redisDAO.savePDF(encryptedDocument, redisDocument.getDocumentID());
         }
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentInputStream);
+        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentBytes);
 
         return Document.newInstance(fileName, signedDocument);
     }

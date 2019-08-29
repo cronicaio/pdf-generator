@@ -42,7 +42,7 @@ public class Beans {
 
     private final BlockchainConfig blockchainConfig;
 
-    @Value("{chacha20.key}")
+    @Value("${chacha20.key}")
     private String chacha20SecretKeyBase64;
 
     @Bean
