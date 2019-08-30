@@ -4,6 +4,8 @@ import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
 import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
 import io.cronica.api.pdfgenerator.component.entity.Document;
+import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
+import io.cronica.api.pdfgenerator.component.observer.DocumentObserver;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
@@ -21,6 +23,9 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -28,12 +33,16 @@ import java.io.IOException;
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final String PDF_DOCUMENT_TYPE = "pdf";
+    private static final int TIME_TO_SLEEP_MILLIS = 500;
+    private static final int TRIALS = 40;
 
     private final Repeater repeater;
 
     private final RedisDAO redisDAO;
 
     private final CronicaCAAdapter cronicaCAAdapter;
+
+    private final DocumentObserver documentObserver;
 
     private final AWSS3BucketAdapter awss3BucketAdapter;
 
@@ -120,25 +129,42 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
-    private Document generateStructuredDocument(final RedisDocument redisDocument) throws Exception {
+    private Document generateStructuredDocument(final RedisDocument redisDocument) {
+        final String documentID = redisDocument.getDocumentID();
 
-        byte[] documentBytes;
-
-        // if PDF is cached to Redis then return it, generate it otherwise
-        if ( this.redisDAO.exists(redisDocument.getDocumentID()) ) {
-            final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
-
-            // decrypt cached PDF
-            documentBytes = ChaCha20Utils.decrypt(cachedPDF);
+        // if PDF does not found in Redis then generate it first
+        if ( !this.redisDAO.exists(documentID) ) {
+            this.documentObserver.putDocumentIDToObserve(documentID);
+            waitForDocument(documentID);
+            this.documentObserver.deletePathWith(documentID);
         }
-        else {
-            documentBytes = new byte[]{};
-        }
+
+        final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
+        final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
         final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentBytes);
 
         return Document.newInstance(fileName, signedDocument);
+    }
+
+    private void waitForDocument(final String documentID) {
+        final CountDownLatch count = new CountDownLatch(TRIALS);
+        while (count.getCount() > 0) {
+            final Optional<DocumentStatus> status = this.documentObserver.check(documentID);
+            if (status.isPresent() && status.get() == DocumentStatus.GENERATED) {
+                break;
+            }
+            else {
+                count.countDown();
+                try {
+                    TimeUnit.MILLISECONDS.sleep(TIME_TO_SLEEP_MILLIS);
+                }
+                catch (InterruptedException ex) {
+                    log.error("[SERVICE] exception while trying to sleep", ex);
+                }
+            }
+        }
     }
 
     /**
