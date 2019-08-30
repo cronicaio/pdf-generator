@@ -54,6 +54,11 @@ dependencies {
     implementation group: 'commons-lang', name: 'commons-lang', version: '2.6'
     implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.18'
 
+    implementation group: 'org.apache.zookeeper', name: 'zookeeper', version: '3.4.13'
+    implementation group: 'org.apache.curator', name: 'curator-client', version: '4.1.0'
+    implementation group: 'org.apache.curator', name: 'curator-framework', version: '4.1.0'
+    implementation group: 'org.apache.curator', name: 'curator-recipes', version: '4.1.0'
+
     implementation group: 'com.google.zxing', name: 'core', version: '3.3.0'
     implementation group: 'com.google.zxing', name: 'javase', version: '3.3.0'
 
