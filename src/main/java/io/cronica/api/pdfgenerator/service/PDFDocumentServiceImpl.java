@@ -6,8 +6,6 @@ import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
 import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
-import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
-import io.cronica.api.pdfgenerator.configuration.Beans;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
@@ -17,16 +15,12 @@ import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -34,7 +28,6 @@ import java.io.InputStream;
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final String PDF_DOCUMENT_TYPE = "pdf";
-    private static final String ALGORITHM = "ChaCha20";
 
     private final Repeater repeater;
 
@@ -46,11 +39,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private final DocumentTransactionService documentTransactionService;
 
-    private final TemplateTransactionService templateTransactionService;
-
     private final DocumentCertificateRepository documentCertificateRepository;
-
-    private final IssuerRegistryTransactionService issuerRegistryTransactionService;
 
     /**
      * @see PDFDocumentService#generatePDFDocument(String)
@@ -72,7 +61,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         }
         else {
             try {
-                return generateStructuredDocument(docCert, redisDocument);
+                return generateStructuredDocument(redisDocument);
             }
             catch (Exception ex) {
                 log.error("[SERVICE] exception while generating PDF of structured document", ex);
@@ -131,8 +120,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
-    private Document generateStructuredDocument(
-            final DocumentCertificate docCertificate, final RedisDocument redisDocument) throws Exception {
+    private Document generateStructuredDocument(final RedisDocument redisDocument) throws Exception {
 
         byte[] documentBytes;
 
@@ -141,61 +129,16 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
 
             // decrypt cached PDF
-            documentBytes = decrypt(cachedPDF);
+            documentBytes = ChaCha20Utils.decrypt(cachedPDF);
         }
         else {
-            final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCertificate);
-            templateHandler.generateTemplate();
-            templateHandler.downloadAdditionalFiles();
-            final InputStream documentInputStream = templateHandler.generatePDFDocument();
-
-            // encrypt PDF before caching to Redis
-            documentBytes = IOUtils.toByteArray(documentInputStream);
-            final byte[] encryptedDocument = encrypt(documentBytes);
-            this.redisDAO.savePDF(encryptedDocument, redisDocument.getDocumentID());
+            documentBytes = new byte[]{};
         }
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
         final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentBytes);
 
         return Document.newInstance(fileName, signedDocument);
-    }
-
-    private byte[] decrypt(final byte[] ciphertext) {
-        final byte[] chacha20Key = Beans.chacha20SecretKey;
-        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
-        return ChaCha20Utils.decrypt(ciphertext, secretKey);
-    }
-
-    private byte[] encrypt(final byte[] plaintext) {
-        final byte[] chacha20Key = Beans.chacha20SecretKey;
-        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
-        return ChaCha20Utils.encrypt(plaintext, secretKey);
-    }
-
-    private TemplateHandler getTemplateHandlerAccordingToFileType(final DocumentCertificate dc) {
-        final String fileType = getFileType(dc);
-        if (fileType.equals("html")) {
-            return new HTMLTemplateHandler(
-                    this.repeater, this.awss3BucketAdapter, dc, this.issuerRegistryTransactionService,
-                    this.templateTransactionService, this.documentTransactionService);
-        }
-        else if (fileType.equals("jrxml")) {
-            return new JasperSoftTemplateHandler(
-                    this.repeater, this.awss3BucketAdapter, dc,
-                    this.issuerRegistryTransactionService, this.templateTransactionService, this.documentTransactionService);
-        }
-        else {
-            throw new RuntimeException("File with " + fileType + " extension is not supporting");
-        }
-    }
-
-    private String getFileType(final DocumentCertificate docCertificate) {
-        final String documentAddress = DocumentUtils.readDocumentAddress(docCertificate.getDocumentID());
-        final String templateID = this.documentTransactionService.getTemplateID(documentAddress);
-        final TemplateContract templateContract = this.templateTransactionService.loadTemplate(templateID);
-
-        return this.templateTransactionService.getFileTypeOfTemplate(templateContract);
     }
 
     /**

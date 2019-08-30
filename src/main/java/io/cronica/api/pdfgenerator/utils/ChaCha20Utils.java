@@ -1,5 +1,6 @@
 package io.cronica.api.pdfgenerator.utils;
 
+import io.cronica.api.pdfgenerator.configuration.Beans;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.*;
@@ -13,6 +14,32 @@ import java.security.NoSuchAlgorithmException;
 public class ChaCha20Utils {
 
     private static final String ALGORITHM = "ChaCha20";
+
+    /**
+     * Encrypt specified plaintext using 'ChaCha20' algorithm.
+     *
+     * @param plaintext
+     *          - data to encrypt
+     * @return ciphertext
+     */
+    public static byte[] encrypt(final byte[] plaintext) {
+        final byte[] chacha20Key = Beans.chacha20SecretKey;
+        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
+        return encrypt(plaintext, secretKey);
+    }
+
+    /**
+     * Decrypt specified ciphertext using 'ChaCha20' algorithm.
+     *
+     * @param ciphertext
+     *          - data to decrypt
+     * @return plaintext
+     */
+    public static byte[] decrypt(final byte[] ciphertext) {
+        final byte[] chacha20Key = Beans.chacha20SecretKey;
+        final SecretKey secretKey = new SecretKeySpec(chacha20Key, 0, chacha20Key.length, ALGORITHM);
+        return decrypt(ciphertext, secretKey);
+    }
 
     /**
      * Encrypt specified plaintext using 'ChaCha20' algorithm.
