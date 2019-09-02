@@ -7,6 +7,9 @@ public interface Constants {
     BigInteger GAS_PRICE = BigInteger.ZERO;
     BigInteger GAS_LIMIT = BigInteger.valueOf(2_000_000L);
 
+    String DOCUMENTS_ROOT = "/documents";
+    String SEPARATOR = "/";
+
     String HEADER_FILE_PREFIX = "header";
     String FOOTER_FILE_PREFIX = "footer";
 

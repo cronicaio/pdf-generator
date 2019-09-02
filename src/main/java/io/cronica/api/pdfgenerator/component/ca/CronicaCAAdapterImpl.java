@@ -1,7 +1,6 @@
 package io.cronica.api.pdfgenerator.component.ca;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -13,9 +12,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
-
-import java.io.IOException;
-import java.io.InputStream;
 
 @Slf4j
 @Component
@@ -29,15 +25,15 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
     private String cronicaCAEndpoint;
 
     /**
-     * @see CronicaCAAdapter#signDocument(InputStream)
+     * @see CronicaCAAdapter#signDocument(byte[])
      */
     @Override
-    public byte[] signDocument(final InputStream documentInputStream) {
+    public byte[] signDocument(final byte[] documentBytes) {
         log.info("[ADAPTER] send request for signing document");
         final String url = this.cronicaCAEndpoint + SIGN_DOCUMENT_URI;
 
         final HttpHeaders httpHeaders = formHeaders();
-        final MultiValueMap<String, Object> body = formBody(documentInputStream);
+        final MultiValueMap<String, Object> body = formBody(documentBytes);
 
         return sendRequest(url, body, httpHeaders);
     }
@@ -48,16 +44,9 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
         return headers;
     }
 
-    private MultiValueMap<String, Object> formBody(final InputStream documentInputStream) {
+    private MultiValueMap<String, Object> formBody(final byte[] documentBytes) {
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        try {
-            final byte[] bytesArr = IOUtils.toByteArray(documentInputStream);
-            body.add(BODY_REQUEST_FILE_KEY, new ByteArrayResource(bytesArr));
-        }
-        catch (IOException ex) {
-            log.error("[ADAPTER] exception while writing bytes to request body", ex);
-            throw new RuntimeException("Exception while writing bytes to request body");
-        }
+        body.add(BODY_REQUEST_FILE_KEY, new ByteArrayResource(documentBytes));
         return body;
     }
 
