@@ -1,5 +1,7 @@
 package io.cronica.api.pdfgenerator.component.aws;
 
+import io.reactivex.Flowable;
+
 public interface AWSS3BucketAdapter {
 
     /**
@@ -29,4 +31,14 @@ public interface AWSS3BucketAdapter {
      *          - path to directory where files should be downloaded
      */
     void downloadFilesWithPrefix(String prefix, String pathToDirectory);
+
+    /**
+     * Download all files which have specified prefix in their names.
+     *
+     * @param prefix
+     *          - prefix of the files
+     * @return
+     *          - Flowable with files data
+     */
+    Flowable<byte[]> downloadFilesWithPrefix(String prefix);
 }

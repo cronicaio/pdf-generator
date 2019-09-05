@@ -1,5 +1,6 @@
 package io.cronica.api.pdfgenerator.service;
 
+import com.github.kklisura.cdt.services.ChromeService;
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
@@ -34,6 +35,8 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private final DocumentCertificateRepository documentCertificateRepository;
 
     private final IssuerRegistryTransactionService issuerRegistryTransactionService;
+
+    private final ChromeService chromeService;
 
     /**
      * @see StructuredPDFGenerator#generateAndSave(String)
@@ -70,9 +73,9 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private TemplateHandler getTemplateHandlerAccordingToFileType(final DocumentCertificate dc) {
         final String fileType = getFileType(dc);
         if (fileType.equals("html")) {
-            return new HTMLTemplateHandler(
+            return new HTMLTemplateHandlerChrome(
                     this.repeater, this.awss3BucketAdapter, dc, this.issuerRegistryTransactionService,
-                    this.templateTransactionService, this.documentTransactionService);
+                    this.templateTransactionService, this.documentTransactionService, this.chromeService);
         }
         else if (fileType.equals("jrxml")) {
             return new JasperSoftTemplateHandler(

@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.IOUtils;
 import io.cronica.api.pdfgenerator.configuration.AWSProperties;
+import io.reactivex.Flowable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @Slf4j
@@ -80,6 +82,21 @@ public class AWSS3BucketAdapterImpl implements AWSS3BucketAdapter {
             log.error("[AWS S3] unable to create directory/file or close resource", ex);
             throw new RuntimeException("Unable to create directory/file or close resource", ex);
         }
+    }
+
+    /**
+     * @see AWSS3BucketAdapter#downloadFilesWithPrefix(String)
+     */
+    @Override
+    public Flowable<byte[]> downloadFilesWithPrefix(String prefix) {
+        log.info("[AWS S3] download files with '{}' prefix", prefix);
+        final ObjectListing objectListing = this.amazonS3.listObjects(this.awsProperties.getS3BucketName(), prefix);
+        // TODO: Here is overhead, need to rewrite #findAllObjects function to construct Flowable response instead of constructing from list
+        final List<S3ObjectSummary> objects = findAllObjects(objectListing);
+        return Flowable.fromIterable(objects)
+                .map(object -> this.amazonS3.getObject(this.awsProperties.getS3BucketName(), object.getKey()))
+                .map(S3Object::getObjectContent)
+                .map(InputStream::readAllBytes);
     }
 
     private List<S3ObjectSummary> findAllObjects(ObjectListing objectListing) {

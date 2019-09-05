@@ -98,6 +98,7 @@ public class DocumentUtils {
         }
     }
 
+    @SuppressWarnings("unchecked cast")
     public static Map<String, Object> convertJsonStringToMap(final String jsonString) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(jsonString, Map.class);

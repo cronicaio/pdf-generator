@@ -58,6 +58,7 @@ public class HTMLUtils {
                 .replace("_" + fontType, "");
     }
 
+    @Deprecated
     public static void importFontsIntoHtml(
             final File htmlFile, final List<Font> fontList)
             throws IOException {
@@ -74,6 +75,22 @@ public class HTMLUtils {
         style.append(styleContent);
 
         FileUtils.writeStringToFile(htmlFile, document.html(), StandardCharsets.UTF_8);
+    }
+
+    public static String importFontsIntoHtml(final String html, final List<Font> fontList) {
+        final Document document = Jsoup.parse(html);
+        final Element head = document.head();
+
+        final String styleContent = removeStyleContentIfFound(document);
+        head.append("<style></style>");
+
+        final Element style = document.selectFirst("style");
+        for (Font font : fontList) {
+            style.append( generateFontFaceBlock(font) );
+        }
+        style.append(styleContent);
+
+        return document.html();
     }
 
     private static String removeStyleContentIfFound(final Document document) {
@@ -97,11 +114,41 @@ public class HTMLUtils {
                 + "\n" + FONT_FACE_CLOSE + "\n";
     }
 
+    @Deprecated
     public static String modifyTemplate(
             Map<String, Object> parameters, final File template) throws IOException {
 
         parameters = DocumentUtils.modifyParameters(parameters);
         final Document htmlDocument = readDocument(template);
+
+        try {
+            log.info("[HTML] inserting rows into tables of HTML document");
+            addRowsToTables(parameters, htmlDocument);
+            log.info("[HTML] rows have been inserted into tables of HTML document");
+        }
+        catch (NullPointerException ex) {
+            log.info("[HTML] one or few given parameters is not matching", ex);
+            throw new InvalidRequestException("One or few given parameters is not matching", ex);
+        }
+
+        log.info("[HTML] replacing variables in HTML document with values");
+        String fullDocument = htmlDocument.html();
+        for (String key : parameters.keySet()) {
+            if ( !(parameters.get(key) instanceof Collection<?>) && fullDocument.contains(key)) {
+                final String parameter = parameters.get(key).toString();
+                fullDocument = StringUtils.replace(fullDocument, key, parameter);
+            }
+        }
+        log.info("[HTML] variables in HTML document have been replaced with values");
+
+        return fullDocument;
+    }
+
+    public static String modifyTemplate(
+            Map<String, Object> parameters, final String template) {
+
+        parameters = DocumentUtils.modifyParameters(parameters);
+        final Document htmlDocument = Jsoup.parse(template);
 
         try {
             log.info("[HTML] inserting rows into tables of HTML document");
