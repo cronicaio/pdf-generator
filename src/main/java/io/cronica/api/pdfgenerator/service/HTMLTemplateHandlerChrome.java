@@ -1,5 +1,10 @@
 package io.cronica.api.pdfgenerator.service;
 
+import com.github.kklisura.cdt.protocol.commands.Page;
+import com.github.kklisura.cdt.protocol.types.page.PrintToPDFTransferMode;
+import com.github.kklisura.cdt.services.ChromeDevToolsService;
+import com.github.kklisura.cdt.services.ChromeService;
+import com.github.kklisura.cdt.services.types.ChromeTab;
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
 import io.cronica.api.pdfgenerator.component.entity.Font;
@@ -17,7 +22,7 @@ import org.springframework.context.annotation.Scope;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,8 +31,10 @@ import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
 @Slf4j
 @Scope("prototype")
-@Deprecated
-public class HTMLTemplateHandler implements TemplateHandler {
+public class HTMLTemplateHandlerChrome implements TemplateHandler  {
+
+    private static final double A4_PAPER_HEIGHT = 11.7;
+    private static final double A4_PAPER_WIDTH = 8.3;
 
     private final String bankCode;
 
@@ -45,6 +52,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
 
     private final IssuerRegistryTransactionService issuerService;
 
+    private final ChromeService service;
+
     private File template;
 
     private File footerTemplate;
@@ -53,18 +62,20 @@ public class HTMLTemplateHandler implements TemplateHandler {
 
     private TemplateContract templateContract;
 
-    public HTMLTemplateHandler(
+    public HTMLTemplateHandlerChrome(
             Repeater repeater,
             AWSS3BucketAdapter awss3BucketAdapter,
             DocumentCertificate docCert,
             IssuerRegistryTransactionService issuerService,
             TemplateTransactionService templateTransactionService,
-            DocumentTransactionService documentTransactionService
+            DocumentTransactionService documentTransactionService,
+            ChromeService service
     ) {
         this.repeater = repeater;
         this.awss3BucketAdapter = awss3BucketAdapter;
         this.issuerService = issuerService;
         this.transactionService = templateTransactionService;
+        this.service = service;
 
         final String documentAddress = DocumentUtils.readDocumentAddress(docCert.getDocumentID());
         this.documentID = docCert.getDocumentID();
@@ -80,7 +91,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
     public void generateTemplate() throws IOException {
         this.templateContract = this.transactionService.loadTemplate(this.templateID);
         log.info("[SERVICE] downloading files of template with {} address",
-                 this.templateContract.getContractAddress());
+                this.templateContract.getContractAddress());
         if ( !templateIsCached() ) {
             downloadMainContent();
         }
@@ -91,7 +102,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
             downloadFooterContent();
         }
         log.info("[SERVICE] all files of template with {} address downloaded",
-                 this.templateContract.getContractAddress());
+                this.templateContract.getContractAddress());
     }
 
     private boolean templateIsCached() {
@@ -103,7 +114,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
     private boolean headerTemplateIsCached() {
         final String fileName =
                 FilenameUtils.getFullPath(this.template.getAbsolutePath())
-                + HEADER_FILE_PREFIX + this.template.getName();
+                        + HEADER_FILE_PREFIX + this.template.getName();
         this.headerTemplate = new File(fileName);
 
         return this.headerTemplate.exists();
@@ -112,7 +123,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
     private boolean footerTemplateIsCached() {
         final String fileName =
                 FilenameUtils.getFullPath(this.template.getAbsolutePath())
-                + FOOTER_FILE_PREFIX + this.template.getName();
+                        + FOOTER_FILE_PREFIX + this.template.getName();
         this.footerTemplate = new File(fileName);
 
         return this.footerTemplate.exists();
@@ -167,35 +178,77 @@ public class HTMLTemplateHandler implements TemplateHandler {
     @Override
     public InputStream generatePDFDocument() throws Exception {
         final String uuid = UUID.randomUUID().toString();
-        final String fileName = "DC-" + uuid + ".pdf";
-        final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
 
-        try {
-            log.info("[SERVICE] begin generating a PDF document using HTML template");
-            final File preparedTemplate = prepareTemplateForGenerating(uuid);
-            importFontsInto(preparedTemplate);
-            insertQrCodeIfNeeded();
-            final File headerFile = findHeaderFile(preparedTemplate.getAbsolutePath());
-            final File footerFile = findFooterFile(preparedTemplate.getAbsolutePath());
+        log.info("[SERVICE] begin generating a PDF document using HTML template");
+        final File preparedTemplate = prepareTemplateForGenerating(uuid);
+        importFontsInto(preparedTemplate);
+        insertQrCodeIfNeeded();
+        final File headerFile = findHeaderFile(preparedTemplate.getAbsolutePath());
+        final File footerFile = findFooterFile(preparedTemplate.getAbsolutePath());
 
-            generatePDFWithWkhtmltopdf(
-                    preparedTemplate.getAbsolutePath(), document, headerFile, footerFile
-            );
+        InputStream inputStream = requestToChrome(preparedTemplate.getAbsolutePath(), headerFile, footerFile);
 
-            deleteFile(preparedTemplate);
-            if (headerFile != null && headerFile.exists()) {
-                deleteFile(headerFile);
-            }
-            if (footerFile != null && footerFile.exists()) {
-                deleteFile(footerFile);
-            }
-
-            log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
-            return new FileInputStream(document);
+        deleteFile(preparedTemplate);
+        if (headerFile != null && headerFile.exists()) {
+            deleteFile(headerFile);
         }
-        finally {
-            deleteFile(document);
+        if (footerFile != null && footerFile.exists()) {
+            deleteFile(footerFile);
         }
+
+        log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
+        return inputStream;
+    }
+
+    private InputStream requestToChrome(
+            final String pathToTemplate,
+            final File headerHtmlFile,
+            final File footerHtmlFile
+    ) throws IOException {
+        final ChromeTab tab = service.createTab();
+        final ChromeDevToolsService devToolsService = service.createDevToolsService(tab);
+        final Page page = devToolsService.getPage();
+
+        double marginTop = .4;
+        boolean displayHeaderFooter = false;
+
+        final String content = FileUtils.readFileToString(new File(pathToTemplate));
+
+        String header = "";
+        if (headerHtmlFile != null) {
+            marginTop = 3.4645669;
+            header = FileUtils.readFileToString(headerHtmlFile);
+            displayHeaderFooter = true;
+        }
+
+        String footer = "";
+        if (footerHtmlFile != null) {
+            footer = FileUtils.readFileToString(footerHtmlFile);
+            displayHeaderFooter = true;
+        }
+
+        page.setDocumentContent(tab.getId(), content);
+        final String pdfBase64 = page.printToPDF(
+                false,
+                displayHeaderFooter,
+                true,
+                .0,
+                A4_PAPER_WIDTH,
+                A4_PAPER_HEIGHT,
+                marginTop,
+                1.65354,
+                .0,
+                .0,
+                "",
+                false,
+                header,
+                footer,
+                false,
+                PrintToPDFTransferMode.RETURN_AS_BASE_64
+        ).getData();
+        devToolsService.waitUntilClosed();
+
+        return new ByteArrayInputStream(Base64.getMimeDecoder().decode(pdfBase64));
     }
 
     private void deleteFile(final File file) {
@@ -252,7 +305,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
     private File generateQrCodeImageFrom(final String linkToPdfDocument) {
         final File qrCodeImage = new File(
                 PATH_TO_FOLDER_WITH_QR_CODE
-                 + "QR-" + this.documentID + PNG_FILE_EXTENSION);
+                        + "QR-" + this.documentID + PNG_FILE_EXTENSION);
         DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
                 100,
@@ -312,48 +365,11 @@ public class HTMLTemplateHandler implements TemplateHandler {
         return footerHtmlFile;
     }
 
-    private void generatePDFWithWkhtmltopdf(
-            final String pathToTemplate, final File document,
-            final File headerHtmlFile, final File footerHtmlFile) throws Exception {
-        FileUtils.touch(document);
 
-        final String pathToPDF = document.getAbsolutePath();
-        log.info("[WKHTMLTOPDF] generating PDF by path: '{}'", pathToPDF);
-
-        final List<String> command = new ArrayList<>();
-        command.add("wkhtmltopdf");
-        command.add("--margin-bottom");
-        command.add("42");
-        command.add("--margin-left");
-        command.add("0");
-        command.add("--margin-right");
-        command.add("0");
-        command.add("--page-size");
-        command.add("A4");
-        if (headerHtmlFile != null) {
-            command.add("--margin-top");
-            command.add("85.75");
-            command.add("--header-spacing");
-            command.add("1");
-            command.add("--header-html");
-            command.add(headerHtmlFile.getAbsolutePath());
-        }
-        if (footerHtmlFile != null) {
-            command.add("--footer-spacing");
-            command.add("5");
-            command.add("--footer-html");
-            command.add(footerHtmlFile.getAbsolutePath());
-        }
-        command.add(pathToTemplate);
-        command.add(pathToPDF);
-
-        final ProcessBuilder pb = new ProcessBuilder(command);
-        pb.start().waitFor();
-        log.info("[WKHTMLTOPDF] PDF successfully generated by path: '{}'", pathToPDF);
-    }
 
     private void insertLinkIn(final File footerHtmlFile) throws IOException {
         final String linkToPdfDocument = getLinkToPdfDocument();
         HTMLUtils.insertDocumentLinkIfFound(linkToPdfDocument, footerHtmlFile);
     }
+
 }
