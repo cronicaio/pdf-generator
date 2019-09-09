@@ -212,18 +212,18 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
         double marginTop = .4;
         boolean displayHeaderFooter = false;
 
-        final String content = FileUtils.readFileToString(new File(pathToTemplate));
+        final String content = FileUtils.readFileToString(new File(pathToTemplate), StandardCharsets.UTF_8);
 
-        String header = "";
+        String header = "<span></span>";
         if (headerHtmlFile != null) {
             marginTop = 3.4645669;
-            header = FileUtils.readFileToString(headerHtmlFile);
+            header = FileUtils.readFileToString(headerHtmlFile, StandardCharsets.UTF_8);
             displayHeaderFooter = true;
         }
 
-        String footer = "";
+        String footer = "<span></span>";
         if (footerHtmlFile != null) {
-            footer = FileUtils.readFileToString(footerHtmlFile);
+            footer = FileUtils.readFileToString(footerHtmlFile, StandardCharsets.UTF_8);
             displayHeaderFooter = true;
         }
 
@@ -232,7 +232,7 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
                 false,
                 displayHeaderFooter,
                 true,
-                .0,
+                1.0,
                 A4_PAPER_WIDTH,
                 A4_PAPER_HEIGHT,
                 marginTop,
@@ -246,9 +246,10 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
                 false,
                 PrintToPDFTransferMode.RETURN_AS_BASE_64
         ).getData();
+        devToolsService.close();
         devToolsService.waitUntilClosed();
 
-        return new ByteArrayInputStream(Base64.getMimeDecoder().decode(pdfBase64));
+        return new ByteArrayInputStream(Base64.getDecoder().decode(pdfBase64));
     }
 
     private void deleteFile(final File file) {
