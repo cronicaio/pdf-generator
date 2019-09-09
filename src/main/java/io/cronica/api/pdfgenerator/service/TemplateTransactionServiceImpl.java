@@ -5,7 +5,7 @@ import static io.cronica.api.pdfgenerator.utils.Constants.GAS_PRICE;
 
 import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
 import io.cronica.api.pdfgenerator.exception.QuorumTransactionException;
-import io.cronica.api.pdfgenerator.utils.DeflateUtils;
+import io.cronica.api.pdfgenerator.utils.LZ4Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -80,7 +80,7 @@ public class TemplateTransactionServiceImpl implements TemplateTransactionServic
             data = fullText.toString();
         }
         else {
-            final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+            final byte[] decompressedData = LZ4Utils.decompress(bytes.getValue());
             data = new String(decompressedData, StandardCharsets.UTF_8);
         }
         return data;
@@ -127,7 +127,7 @@ public class TemplateTransactionServiceImpl implements TemplateTransactionServic
             data = fullText.toString();
         }
         else {
-            final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+            final byte[] decompressedData = LZ4Utils.decompress(bytes.getValue());
             data = new String(decompressedData, StandardCharsets.UTF_8);
         }
         return data;
@@ -174,7 +174,7 @@ public class TemplateTransactionServiceImpl implements TemplateTransactionServic
             data = fullText.toString();
         }
         else {
-            final byte[] decompressedData = DeflateUtils.decompress(bytes.getValue());
+            final byte[] decompressedData = LZ4Utils.decompress(bytes.getValue());
             data = new String(decompressedData, StandardCharsets.UTF_8);
         }
         return data;
