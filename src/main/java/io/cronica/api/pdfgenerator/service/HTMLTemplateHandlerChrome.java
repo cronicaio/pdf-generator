@@ -216,13 +216,14 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
 
         String header = "<span></span>";
         if (headerHtmlFile != null) {
-            marginTop = 3.4645669;
+            marginTop = 3.3759843; //TODO: Get value from template property
             header = FileUtils.readFileToString(headerHtmlFile, StandardCharsets.UTF_8);
             displayHeaderFooter = true;
         }
 
         String footer = "<span></span>";
         if (footerHtmlFile != null) {
+            //marginBottom TODO: Get value from template property
             footer = FileUtils.readFileToString(footerHtmlFile, StandardCharsets.UTF_8);
             displayHeaderFooter = true;
         }
