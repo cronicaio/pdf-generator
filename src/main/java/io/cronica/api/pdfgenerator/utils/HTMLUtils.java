@@ -195,6 +195,7 @@ public class HTMLUtils {
                && img.attr("qrcode").equals("true");
     }
 
+    @Deprecated
     public static void insertQrCodeImagePathAndAltText(
             final String qrCodeImagePath, final String altText, final File template
     ) throws IOException {
@@ -203,6 +204,20 @@ public class HTMLUtils {
         for (Element img : imgs) {
             if ( hasValidQRCodeAttr(img) ) {
                 img.attr("src", qrCodeImagePath);
+                img.attr("alt", altText);
+            }
+        }
+        FileUtils.writeStringToFile(template, document.html(), StandardCharsets.UTF_8);
+    }
+
+    public static void insertQrCodeImageBase64(
+            final String base64Image, final String altText, final String mimeType, final File template
+    ) throws IOException {
+        final Document document = readDocument(template);
+        final Elements imgs = document.select("img");
+        for (Element img : imgs) {
+            if ( hasValidQRCodeAttr(img) ) {
+                img.attr("src", "data:" + mimeType + BASE64_CONTENT_OPEN + base64Image);
                 img.attr("alt", altText);
             }
         }

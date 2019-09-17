@@ -20,6 +20,8 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.context.annotation.Scope;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -288,10 +290,10 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
         final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
         if (qrCodeImageTagsFound) {
             final String linkToPdfDocument = getLinkToPdfDocument();
-            final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
+            final String qrCodeImageBase64 = new String(Base64.getMimeEncoder().encode(generateQrCodeImageFrom(linkToPdfDocument)), StandardCharsets.UTF_8);
 
-            HTMLUtils.insertQrCodeImagePathAndAltText(
-                    qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
+            HTMLUtils.insertQrCodeImageBase64(
+                    qrCodeImageBase64, linkToPdfDocument, "image/png", this.template
             );
         }
     }
@@ -304,16 +306,15 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
                 + this.documentID;
     }
 
-    private File generateQrCodeImageFrom(final String linkToPdfDocument) {
-        final File qrCodeImage = new File(
-                PATH_TO_FOLDER_WITH_QR_CODE
-                        + "QR-" + this.documentID + PNG_FILE_EXTENSION);
-        DocumentUtils.generateQRCodeImage(
+    private byte[] generateQrCodeImageFrom(final String linkToPdfDocument) throws IOException {
+        BufferedImage originalImage = DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
                 100,
-                100,
-                qrCodeImage.getAbsolutePath());
-        return qrCodeImage;
+                100);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(originalImage, "png", baos);
+        baos.flush();
+        return baos.toByteArray();
     }
 
     private File findHeaderFile(final String pathToTemplate) throws IOException {
@@ -357,9 +358,9 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
         insertLinkIn(footerHtmlFile);
 
         final String linkToPdfDocument = getLinkToPdfDocument();
-        final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
-        HTMLUtils.insertQrCodeImagePathAndAltText(
-                qrCodeImage.getAbsolutePath(), this.documentID, footerHtmlFile
+        final String qrCodeImageBase64 = new String(Base64.getMimeEncoder().encode(generateQrCodeImageFrom(linkToPdfDocument)), StandardCharsets.UTF_8);
+        HTMLUtils.insertQrCodeImageBase64(
+                qrCodeImageBase64, this.documentID, "image/png", footerHtmlFile
         );
 
         log.info("[SERVICE] footer has been generated");
