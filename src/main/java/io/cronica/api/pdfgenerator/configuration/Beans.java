@@ -70,11 +70,8 @@ public class Beans {
 
     @Bean
     public AmazonS3 initAmazonS3() {
-        final BasicAWSCredentials awsCred = new BasicAWSCredentials(
-                this.awsProperties.getAccessKey(), this.awsProperties.getSecretKey());
         return AmazonS3ClientBuilder.standard()
                 .withRegion(this.awsProperties.getRegion())
-                .withCredentials(new AWSStaticCredentialsProvider(awsCred))
                 .withClientConfiguration(
                         new ClientConfiguration()
                             .withMaxConnections(AWS_MAX_CONNECTIONS)
