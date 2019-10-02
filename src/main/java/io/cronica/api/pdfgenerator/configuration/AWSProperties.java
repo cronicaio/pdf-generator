@@ -15,5 +15,9 @@ public class AWSProperties {
 
     private String region;
 
+    private String accessKey;
+
+    private String secretKey;
+
     private String s3BucketName;
 }
