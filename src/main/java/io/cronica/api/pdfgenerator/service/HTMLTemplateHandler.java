@@ -288,11 +288,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
         log.info("[SERVICE] generating footer");
 
         if (this.footerTemplate == null || !this.footerTemplate.exists()) {
-            this.footerTemplate = new File(DEFAULT_FOOTER_CONTENT_FILE_PATH);
-            if (!this.footerTemplate.exists()) {
-                log.info("[SERVICE] footer file does not found, skip it");
-                return null;
-            }
+            log.info("[SERVICE] footer file does not found, skip it");
+            return null;
         }
 
         final File footerHtmlFile = new File(pathToTemplate + "footer_content.html");
