@@ -210,11 +210,11 @@ public class HTMLUtils {
         FileUtils.writeStringToFile(template, document.html(), StandardCharsets.UTF_8);
     }
 
-    public static void insertQrCodeImageBase64(
-            final String base64Image, final String altText, final String mimeType, final File template
+    public static void insertBase64ImageIntoImg(
+            String selector, final String base64Image, final String altText, final String mimeType, final File template
     ) throws IOException {
         final Document document = readDocument(template);
-        final Elements imgs = document.select("img");
+        final Elements imgs = document.select(selector);
         for (Element img : imgs) {
             if ( hasValidQRCodeAttr(img) ) {
                 img.attr("src", "data:" + mimeType + BASE64_CONTENT_OPEN + base64Image);
@@ -222,6 +222,12 @@ public class HTMLUtils {
             }
         }
         FileUtils.writeStringToFile(template, document.html(), StandardCharsets.UTF_8);
+    }
+
+    public static void insertQrCodeImageBase64(
+            final String base64Image, final String altText, final String mimeType, final File template
+    ) throws IOException {
+        insertBase64ImageIntoImg("img", base64Image, altText, mimeType, template);
     }
 
     private static Document readDocument(final File template) throws IOException {

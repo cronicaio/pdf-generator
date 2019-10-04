@@ -31,4 +31,6 @@ public interface Constants {
 
     String SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL = "/#/searchByIdStructured/";
 
+    String BASE64IMAGE = "base64image";
+
 }
