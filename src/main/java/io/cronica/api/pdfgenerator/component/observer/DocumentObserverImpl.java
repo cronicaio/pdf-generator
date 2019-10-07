@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -50,8 +51,13 @@ public class DocumentObserverImpl implements DocumentObserver {
                         final byte[] data = readDataByPath(path);
                         if ( Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data) ) {
                             setStatus(path, DocumentStatus.PENDING);
-                            this.structuredPDFGenerator.generateAndSave(documentID);
-                            setStatus(path, DocumentStatus.GENERATED);
+                            CompletableFuture.runAsync(() -> {
+                                this.structuredPDFGenerator.generateAndSave(documentID);
+                                setStatus(path, DocumentStatus.GENERATED);
+                            }).exceptionally(ex -> {
+                                log.error("[OBSERVER] Error while generating document", ex);
+                                return null;
+                            });
                         }
                     })
                     .collect(Collectors.toList());

@@ -34,7 +34,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final String PDF_DOCUMENT_TYPE = "pdf";
     private static final int TIME_TO_SLEEP_MILLIS = 500;
-    private static final int TRIALS = 40;
+    private static final int TRIALS = 120;
 
     private final Repeater repeater;
 
