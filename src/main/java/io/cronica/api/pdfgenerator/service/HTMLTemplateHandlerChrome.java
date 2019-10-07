@@ -249,8 +249,7 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
                 false,
                 PrintToPDFTransferMode.RETURN_AS_BASE_64
         ).getData();
-        devToolsService.close();
-        devToolsService.waitUntilClosed();
+        service.closeTab(tab);
 
         return new ByteArrayInputStream(Base64.getDecoder().decode(pdfBase64));
     }
