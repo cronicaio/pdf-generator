@@ -239,7 +239,7 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
                 A4_PAPER_WIDTH,
                 A4_PAPER_HEIGHT,
                 marginTop,
-                1.65354,
+                1.45354,
                 .0,
                 .0,
                 "",
