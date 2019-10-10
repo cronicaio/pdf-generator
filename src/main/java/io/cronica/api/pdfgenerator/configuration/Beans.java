@@ -28,6 +28,8 @@ import java.util.Base64;
 @Configuration
 public class Beans {
 
+    private static final String BASTION_TOKEN_HEADER = "X-TOKEN";
+
     private static final int NODE_POLLING_INTERVAL = 100;
 
     private static final int AWS_MAX_CONNECTIONS = 150;
@@ -47,16 +49,16 @@ public class Beans {
 
     @Bean
     public Quorum initQuorumNode() {
-        return Quorum.build(new HttpService(this.blockchainConfig.getQuorumNodeEndpoint()));
+        final HttpService httpService = new HttpService(this.blockchainConfig.getQuorumNodeEndpoint());
+        httpService.addHeader(BASTION_TOKEN_HEADER, this.blockchainConfig.getQuorumBastionToken());
+        return Quorum.build(httpService);
     }
 
     @Bean
     public Web3j initWeb3j() {
-        return Web3j.build(
-                new HttpService(this.blockchainConfig.getQuorumNodeEndpoint()),
-                NODE_POLLING_INTERVAL,
-                Async.defaultExecutorService()
-        );
+        final HttpService httpService = new HttpService(this.blockchainConfig.getQuorumNodeEndpoint());
+        httpService.addHeader(BASTION_TOKEN_HEADER, this.blockchainConfig.getQuorumBastionToken());
+        return Web3j.build(httpService, NODE_POLLING_INTERVAL, Async.defaultExecutorService());
     }
 
     @Bean
@@ -76,11 +78,8 @@ public class Beans {
 
     @Bean
     public AmazonS3 initAmazonS3() {
-        final BasicAWSCredentials awsCred = new BasicAWSCredentials(
-                this.awsProperties.getAccessKey(), this.awsProperties.getSecretKey());
         return AmazonS3ClientBuilder.standard()
                 .withRegion(this.awsProperties.getRegion())
-                .withCredentials(new AWSStaticCredentialsProvider(awsCred))
                 .withClientConfiguration(
                         new ClientConfiguration()
                             .withMaxConnections(AWS_MAX_CONNECTIONS)
