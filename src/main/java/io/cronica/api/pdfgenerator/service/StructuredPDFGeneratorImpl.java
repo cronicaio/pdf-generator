@@ -73,9 +73,9 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private TemplateHandler getTemplateHandlerAccordingToFileType(final DocumentCertificate dc) {
         final String fileType = getFileType(dc);
         if (fileType.equals("html")) {
-            return new HTMLTemplateHandlerChrome(
+            return new HTMLTemplateHandler(
                     this.repeater, this.awss3BucketAdapter, dc, this.issuerRegistryTransactionService,
-                    this.templateTransactionService, this.documentTransactionService, this.chromeService);
+                    this.templateTransactionService, this.documentTransactionService);
         }
         else if (fileType.equals("jrxml")) {
             return new JasperSoftTemplateHandler(

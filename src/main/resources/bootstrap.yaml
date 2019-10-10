@@ -5,6 +5,7 @@ spring:
     config:
       uri: ${CONFIG_SERVER_ENDPOINT}
       profile: prod
+      label: ${CONFIG_LABEL}
     vault:
       host: ${HASHICORP_VAULT_HOST}
       port: 8200
