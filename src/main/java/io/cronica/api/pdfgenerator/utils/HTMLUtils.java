@@ -140,7 +140,11 @@ public class HTMLUtils {
                     }
                     final Elements tables = getTablesFrom(htmlDocument);
                     try {
-                        htmlDocument.selectFirst("table#" + param).append(builder.toString());
+                        String old = htmlDocument.selectFirst("table#" + param).wholeText();
+                        htmlDocument.selectFirst("table#" + param)
+                                .empty()
+                                .append(builder.toString())
+                                .append(old);
                     }
                     catch (NullPointerException ex) {
                         for (Element table : tables) {
