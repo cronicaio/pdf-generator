@@ -153,8 +153,8 @@ public class HTMLUtils {
                         for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
                                 && table.attr("data-tablename").equals(param)) {
-                                final String thead = removeThead(htmlDocument, param);
-                                final String tfoot = removeTfoot(htmlDocument, param);
+                                final String thead = removeThead(table);
+                                final String tfoot = removeTfoot(table);
 
                                 table.selectFirst("table")
                                         .append(thead)
