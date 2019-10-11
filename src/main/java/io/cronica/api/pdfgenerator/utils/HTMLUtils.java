@@ -141,21 +141,25 @@ public class HTMLUtils {
                     final Elements tables = getTablesFrom(htmlDocument);
                     final Elements filterTables = filterTables(tables);
                     try {
-                        final String old = htmlDocument.selectFirst("table#" + param).text();
+                        final String thead = removeThead(htmlDocument, param);
+                        final String tfoot = removeTfoot(htmlDocument, param);
+
                         htmlDocument.selectFirst("table#" + param)
-                                .empty()
+                                .append(thead)
                                 .append(builder.toString())
-                                .append(old);
+                                .append(tfoot);
                     }
                     catch (NullPointerException ex) {
                         for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
                                 && table.attr("data-tablename").equals(param)) {
-                                final String old = table.selectFirst("table").text();
+                                final String thead = removeThead(htmlDocument, param);
+                                final String tfoot = removeTfoot(htmlDocument, param);
+
                                 table.selectFirst("table")
-                                        .empty()
+                                        .append(thead)
                                         .append(builder.toString())
-                                        .append(old);
+                                        .append(tfoot);
                             }
                         }
                     }
@@ -196,6 +200,26 @@ public class HTMLUtils {
             }
         }
         return filteredTables;
+    }
+
+    private static String removeThead(final Document htmlDocument, final String param) {
+        return removeThead(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeThead(final Element table) {
+        final String thead = table.selectFirst("thead").text();
+        table.selectFirst("thead").remove();
+        return thead;
+    }
+
+    private static String removeTfoot(final Document htmlDocument, final String param) {
+        return removeTfoot(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeTfoot(final Element table) {
+        final String thead = table.selectFirst("tfoot").text();
+        table.selectFirst("tfoot").remove();
+        return thead;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
