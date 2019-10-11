@@ -141,30 +141,30 @@ public class HTMLUtils {
                     final Elements tables = getTablesFrom(htmlDocument);
                     final Elements filterTables = filterTables(tables);
                     try {
-                        final String thead = removeThead(htmlDocument, param);
-                        final String tfoot = removeTfoot(htmlDocument, param);
+                        final String theadContent = removeThead(htmlDocument, param);
+                        final String tfootContent = removeTfoot(htmlDocument, param);
 
-                        if (!StringUtils.isEmpty(thead)) {
-                            htmlDocument.selectFirst("table#" + param).append(thead);
+                        if (!StringUtils.isEmpty(theadContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<thead>" + theadContent + "</thead>");
                         }
                         htmlDocument.selectFirst("table#" + param).append(builder.toString());
-                        if (!StringUtils.isEmpty(tfoot)) {
-                            htmlDocument.selectFirst("table#" + param).append(tfoot);
+                        if (!StringUtils.isEmpty(tfootContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<tfoot>" + tfootContent + "</tfoot>");
                         }
                     }
                     catch (NullPointerException ex) {
                         for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
                                 && table.attr("data-tablename").equals(param)) {
-                                final String thead = removeThead(table);
-                                final String tfoot = removeTfoot(table);
+                                final String theadContent = removeThead(table);
+                                final String tfootContent = removeTfoot(table);
 
-                                if (!StringUtils.isEmpty(thead)) {
-                                    table.selectFirst("table").append(thead);
+                                if (!StringUtils.isEmpty(theadContent)) {
+                                    table.selectFirst("table").append("<thead>" + theadContent + "</thead>");
                                 }
                                 table.selectFirst("table").append(builder.toString());
-                                if (!StringUtils.isEmpty(tfoot)) {
-                                    table.selectFirst("table").append(tfoot);
+                                if (!StringUtils.isEmpty(tfootContent)) {
+                                    table.selectFirst("table").append("<tfoot>" + tfootContent + "</tfoot>");
                                 }
                             }
                         }
@@ -213,9 +213,9 @@ public class HTMLUtils {
     }
 
     private static String removeThead(final Element table) {
-        final String thead = table.selectFirst("thead").html();
+        final String theadContent = table.selectFirst("thead").html();
         table.selectFirst("thead").remove();
-        return thead;
+        return theadContent;
     }
 
     private static String removeTfoot(final Document htmlDocument, final String param) {
@@ -223,9 +223,9 @@ public class HTMLUtils {
     }
 
     private static String removeTfoot(final Element table) {
-        final String thead = table.selectFirst("tfoot").html();
+        final String tfootContent = table.selectFirst("tfoot").html();
         table.selectFirst("tfoot").remove();
-        return thead;
+        return tfootContent;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
