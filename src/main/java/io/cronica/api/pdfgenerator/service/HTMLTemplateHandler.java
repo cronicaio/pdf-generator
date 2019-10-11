@@ -26,7 +26,6 @@ import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
 @Slf4j
 @Scope("prototype")
-@Deprecated
 public class HTMLTemplateHandler implements TemplateHandler {
 
     private final String bankCode;

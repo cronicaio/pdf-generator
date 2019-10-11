@@ -139,14 +139,41 @@ public class HTMLUtils {
                         addRow(builder, columns);
                     }
                     final Elements tables = getTablesFrom(htmlDocument);
+                    final Elements filterTables = filterTables(tables);
                     try {
+                        final String theadContent = removeThead(htmlDocument, param);
+                        final String tfootContent = removeTfoot(htmlDocument, param);
+                        final String tbodyContent = removeTbody(htmlDocument, param);
+
+                        if (!StringUtils.isEmpty(theadContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<thead>" + theadContent + "</thead>");
+                        }
                         htmlDocument.selectFirst("table#" + param).append(builder.toString());
+                        if (!StringUtils.isEmpty(tbodyContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<tbody>" + tbodyContent + "</tbody>");
+                        }
+                        if (!StringUtils.isEmpty(tfootContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<tfoot>" + tfootContent + "</tfoot>");
+                        }
                     }
                     catch (NullPointerException ex) {
-                        for (Element table : tables) {
+                        for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
-                                    && table.attr("data-tablename").equals(param)) {
+                                && table.attr("data-tablename").equals(param)) {
+                                final String theadContent = removeThead(table);
+                                final String tfootContent = removeTfoot(table);
+                                final String tbodyContent = removeTbody(table);
+
+                                if (!StringUtils.isEmpty(theadContent)) {
+                                    table.selectFirst("table").append("<thead>" + theadContent + "</thead>");
+                                }
                                 table.selectFirst("table").append(builder.toString());
+                                if (!StringUtils.isEmpty(tbodyContent)) {
+                                    table.selectFirst("table").append("<tbody>" + tbodyContent + "</tbody>");
+                                }
+                                if (!StringUtils.isEmpty(tfootContent)) {
+                                    table.selectFirst("table").append("<tfoot>" + tfootContent + "</tfoot>");
+                                }
                             }
                         }
                     }
@@ -177,6 +204,46 @@ public class HTMLUtils {
             tableElements = htmlDocument.select("table");
         }
         return tableElements;
+    }
+
+    private static Elements filterTables(final Elements tables) {
+        final Elements filteredTables = new Elements();
+        for (Element table : tables) {
+            if (!table.hasAttr("ignore")) {
+                filteredTables.add(table);
+            }
+        }
+        return filteredTables;
+    }
+
+    private static String removeThead(final Document htmlDocument, final String param) {
+        return removeThead(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeThead(final Element table) {
+        final String theadContent = table.selectFirst("thead").html();
+        table.selectFirst("thead").remove();
+        return theadContent;
+    }
+
+    private static String removeTfoot(final Document htmlDocument, final String param) {
+        return removeTfoot(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeTfoot(final Element table) {
+        final String tfootContent = table.selectFirst("tfoot").html();
+        table.selectFirst("tfoot").remove();
+        return tfootContent;
+    }
+
+    private static String removeTbody(final Document htmlDocument, final String param) {
+        return removeTbody(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeTbody(final Element table) {
+        final String tbodyContent = table.selectFirst("tbody").html();
+        table.selectFirst("tbody").remove();
+        return tbodyContent;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
