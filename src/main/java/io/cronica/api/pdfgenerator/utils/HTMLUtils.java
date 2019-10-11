@@ -144,9 +144,6 @@ public class HTMLUtils {
                         final String thead = removeThead(htmlDocument, param);
                         final String tfoot = removeTfoot(htmlDocument, param);
 
-                        log.info("[THEAD] {}", thead);
-                        log.info("[TFOOT] {}", tfoot);
-
                         htmlDocument.selectFirst("table#" + param)
                                 .appendText(thead)
                                 .append(builder.toString())
@@ -158,9 +155,6 @@ public class HTMLUtils {
                                 && table.attr("data-tablename").equals(param)) {
                                 final String thead = removeThead(table);
                                 final String tfoot = removeTfoot(table);
-
-                                log.info("[THEAD] {}", thead);
-                                log.info("[TFOOT] {}", tfoot);
 
                                 table.selectFirst("table")
                                         .appendText(thead)
@@ -213,7 +207,7 @@ public class HTMLUtils {
     }
 
     private static String removeThead(final Element table) {
-        final String thead = table.selectFirst("thead").text();
+        final String thead = table.selectFirst("thead").html();
         table.selectFirst("thead").remove();
         return thead;
     }
@@ -223,7 +217,7 @@ public class HTMLUtils {
     }
 
     private static String removeTfoot(final Element table) {
-        final String thead = table.selectFirst("tfoot").text();
+        final String thead = table.selectFirst("tfoot").html();
         table.selectFirst("tfoot").remove();
         return thead;
     }
