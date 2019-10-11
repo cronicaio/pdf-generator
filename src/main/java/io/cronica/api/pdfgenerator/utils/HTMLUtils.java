@@ -144,13 +144,13 @@ public class HTMLUtils {
                         final String thead = removeThead(htmlDocument, param);
                         final String tfoot = removeTfoot(htmlDocument, param);
 
-                        log.info("[THEAD] {}", thead);
-                        log.info("[TFOOT] {}", tfoot);
-
-                        htmlDocument.selectFirst("table#" + param)
-                                .append(thead)
-                                .append(builder.toString())
-                                .append(tfoot);
+                        if (!StringUtils.isEmpty(thead)) {
+                            htmlDocument.selectFirst("table#" + param).append(thead);
+                        }
+                        htmlDocument.selectFirst("table#" + param).append(builder.toString());
+                        if (!StringUtils.isEmpty(tfoot)) {
+                            htmlDocument.selectFirst("table#" + param).append(tfoot);
+                        }
                     }
                     catch (NullPointerException ex) {
                         for (Element table : filterTables) {
@@ -159,13 +159,13 @@ public class HTMLUtils {
                                 final String thead = removeThead(table);
                                 final String tfoot = removeTfoot(table);
 
-                                log.info("[THEAD] {}", thead);
-                                log.info("[TFOOT] {}", tfoot);
-
-                                table.selectFirst("table")
-                                        .append(thead)
-                                        .append(builder.toString())
-                                        .append(tfoot);
+                                if (!StringUtils.isEmpty(thead)) {
+                                    table.selectFirst("table").append(thead);
+                                }
+                                table.selectFirst("table").append(builder.toString());
+                                if (!StringUtils.isEmpty(tfoot)) {
+                                    table.selectFirst("table").append(tfoot);
+                                }
                             }
                         }
                     }
