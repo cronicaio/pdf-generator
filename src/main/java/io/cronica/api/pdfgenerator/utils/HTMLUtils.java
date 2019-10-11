@@ -141,7 +141,7 @@ public class HTMLUtils {
                     final Elements tables = getTablesFrom(htmlDocument);
                     final Elements filterTables = filterTables(tables);
                     try {
-                        final String old = htmlDocument.selectFirst("table#" + param).wholeText();
+                        final String old = htmlDocument.selectFirst("table#" + param).text();
                         htmlDocument.selectFirst("table#" + param)
                                 .empty()
                                 .append(builder.toString())
@@ -151,7 +151,7 @@ public class HTMLUtils {
                         for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
                                 && table.attr("data-tablename").equals(param)) {
-                                final String old = table.selectFirst("table").wholeText();
+                                final String old = table.selectFirst("table").text();
                                 table.selectFirst("table")
                                         .empty()
                                         .append(builder.toString())
