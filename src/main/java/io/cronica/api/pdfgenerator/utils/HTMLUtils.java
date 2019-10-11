@@ -149,8 +149,12 @@ public class HTMLUtils {
                     catch (NullPointerException ex) {
                         for (Element table : tables) {
                             if (table.hasAttr("data-tablename")
-                                    && table.attr("data-tablename").equals(param)) {
-                                table.selectFirst("table").append(builder.toString());
+                                && table.attr("data-tablename").equals(param)) {
+                                String old = table.selectFirst("table").wholeText();
+                                table.selectFirst("table")
+                                        .empty()
+                                        .append(builder.toString())
+                                        .append(old);
                             }
                         }
                     }
