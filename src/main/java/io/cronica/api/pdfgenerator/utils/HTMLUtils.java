@@ -145,9 +145,9 @@ public class HTMLUtils {
                         final String tfoot = removeTfoot(htmlDocument, param);
 
                         htmlDocument.selectFirst("table#" + param)
-                                .appendText(thead)
+                                .append(thead)
                                 .append(builder.toString())
-                                .appendText(tfoot);
+                                .append(tfoot);
                     }
                     catch (NullPointerException ex) {
                         for (Element table : filterTables) {
@@ -157,9 +157,9 @@ public class HTMLUtils {
                                 final String tfoot = removeTfoot(table);
 
                                 table.selectFirst("table")
-                                        .appendText(thead)
+                                        .append(thead)
                                         .append(builder.toString())
-                                        .appendText(tfoot);
+                                        .append(tfoot);
                             }
                         }
                     }
