@@ -139,18 +139,19 @@ public class HTMLUtils {
                         addRow(builder, columns);
                     }
                     final Elements tables = getTablesFrom(htmlDocument);
+                    final Elements filterTables = filterTables(tables);
                     try {
-                        String old = htmlDocument.selectFirst("table#" + param).wholeText();
+                        final String old = htmlDocument.selectFirst("table#" + param).wholeText();
                         htmlDocument.selectFirst("table#" + param)
                                 .empty()
                                 .append(builder.toString())
                                 .append(old);
                     }
                     catch (NullPointerException ex) {
-                        for (Element table : tables) {
+                        for (Element table : filterTables) {
                             if (table.hasAttr("data-tablename")
                                 && table.attr("data-tablename").equals(param)) {
-                                String old = table.selectFirst("table").wholeText();
+                                final String old = table.selectFirst("table").wholeText();
                                 table.selectFirst("table")
                                         .empty()
                                         .append(builder.toString())
@@ -185,6 +186,16 @@ public class HTMLUtils {
             tableElements = htmlDocument.select("table");
         }
         return tableElements;
+    }
+
+    private static Elements filterTables(final Elements tables) {
+        final Elements filteredTables = new Elements();
+        for (Element table : tables) {
+            if (!table.hasAttr("ignore")) {
+                filteredTables.add(table);
+            }
+        }
+        return filteredTables;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
