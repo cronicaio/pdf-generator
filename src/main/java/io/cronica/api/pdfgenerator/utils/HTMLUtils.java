@@ -143,11 +143,15 @@ public class HTMLUtils {
                     try {
                         final String theadContent = removeThead(htmlDocument, param);
                         final String tfootContent = removeTfoot(htmlDocument, param);
+                        final String tbodyContent = removeTbody(htmlDocument, param);
 
                         if (!StringUtils.isEmpty(theadContent)) {
                             htmlDocument.selectFirst("table#" + param).append("<thead>" + theadContent + "</thead>");
                         }
                         htmlDocument.selectFirst("table#" + param).append(builder.toString());
+                        if (!StringUtils.isEmpty(tbodyContent)) {
+                            htmlDocument.selectFirst("table#" + param).append("<tbody>" + tbodyContent + "</tbody>");
+                        }
                         if (!StringUtils.isEmpty(tfootContent)) {
                             htmlDocument.selectFirst("table#" + param).append("<tfoot>" + tfootContent + "</tfoot>");
                         }
@@ -158,11 +162,15 @@ public class HTMLUtils {
                                 && table.attr("data-tablename").equals(param)) {
                                 final String theadContent = removeThead(table);
                                 final String tfootContent = removeTfoot(table);
+                                final String tbodyContent = removeTbody(table);
 
                                 if (!StringUtils.isEmpty(theadContent)) {
                                     table.selectFirst("table").append("<thead>" + theadContent + "</thead>");
                                 }
                                 table.selectFirst("table").append(builder.toString());
+                                if (!StringUtils.isEmpty(tbodyContent)) {
+                                    table.selectFirst("table").append("<tbody>" + tbodyContent + "</tbody>");
+                                }
                                 if (!StringUtils.isEmpty(tfootContent)) {
                                     table.selectFirst("table").append("<tfoot>" + tfootContent + "</tfoot>");
                                 }
@@ -226,6 +234,16 @@ public class HTMLUtils {
         final String tfootContent = table.selectFirst("tfoot").html();
         table.selectFirst("tfoot").remove();
         return tfootContent;
+    }
+
+    private static String removeTbody(final Document htmlDocument, final String param) {
+        return removeTbody(htmlDocument.selectFirst("table#" + param));
+    }
+
+    private static String removeTbody(final Element table) {
+        final String tbodyContent = table.selectFirst("tbody").html();
+        table.selectFirst("tbody").remove();
+        return tbodyContent;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
