@@ -144,10 +144,13 @@ public class HTMLUtils {
                         final String thead = removeThead(htmlDocument, param);
                         final String tfoot = removeTfoot(htmlDocument, param);
 
+                        log.info("[THEAD] {}", thead);
+                        log.info("[TFOOT] {}", tfoot);
+
                         htmlDocument.selectFirst("table#" + param)
-                                .append(thead)
+                                .appendText(thead)
                                 .append(builder.toString())
-                                .append(tfoot);
+                                .appendText(tfoot);
                     }
                     catch (NullPointerException ex) {
                         for (Element table : filterTables) {
@@ -156,10 +159,13 @@ public class HTMLUtils {
                                 final String thead = removeThead(table);
                                 final String tfoot = removeTfoot(table);
 
+                                log.info("[THEAD] {}", thead);
+                                log.info("[TFOOT] {}", tfoot);
+
                                 table.selectFirst("table")
-                                        .append(thead)
+                                        .appendText(thead)
                                         .append(builder.toString())
-                                        .append(tfoot);
+                                        .appendText(tfoot);
                             }
                         }
                     }
