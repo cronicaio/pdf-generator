@@ -221,9 +221,13 @@ public class HTMLUtils {
     }
 
     private static String removeThead(final Element table) {
-        final String theadContent = table.selectFirst("thead").html();
-        table.selectFirst("thead").remove();
-        return theadContent;
+        final Element element = table.selectFirst("thead");
+        if (element != null) {
+            final String theadContent = element.html();
+            table.selectFirst("thead").remove();
+            return theadContent;
+        }
+        return StringUtils.EMPTY;
     }
 
     private static String removeTfoot(final Document htmlDocument, final String param) {
@@ -231,9 +235,13 @@ public class HTMLUtils {
     }
 
     private static String removeTfoot(final Element table) {
-        final String tfootContent = table.selectFirst("tfoot").html();
-        table.selectFirst("tfoot").remove();
-        return tfootContent;
+        final Element element = table.selectFirst("tfoot");
+        if (element != null) {
+            final String tfootContent = element.html();
+            table.selectFirst("tfoot").remove();
+            return tfootContent;
+        }
+        return StringUtils.EMPTY;
     }
 
     private static String removeTbody(final Document htmlDocument, final String param) {
@@ -241,9 +249,13 @@ public class HTMLUtils {
     }
 
     private static String removeTbody(final Element table) {
-        final String tbodyContent = table.selectFirst("tbody").html();
-        table.selectFirst("tbody").remove();
-        return tbodyContent;
+        final Element element = table.selectFirst("tbody");
+        if (element != null) {
+            final String tbodyContent = element.html();
+            table.selectFirst("tbody").remove();
+            return tbodyContent;
+        }
+        return StringUtils.EMPTY;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
