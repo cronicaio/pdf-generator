@@ -221,14 +221,13 @@ public class HTMLUtils {
     }
 
     private static String removeThead(final Element table) {
-        Element element = table.selectFirst("thead");
+        final Element element = table.selectFirst("thead");
         if (element != null) {
             final String theadContent = element.html();
             table.selectFirst("thead").remove();
             return theadContent;
-        } else {
-            return "";
         }
+        return StringUtils.EMPTY;
     }
 
     private static String removeTfoot(final Document htmlDocument, final String param) {
@@ -236,14 +235,13 @@ public class HTMLUtils {
     }
 
     private static String removeTfoot(final Element table) {
-        Element element = table.selectFirst("tfoot");
+        final Element element = table.selectFirst("tfoot");
         if (element != null) {
             final String tfootContent = element.html();
             table.selectFirst("tfoot").remove();
             return tfootContent;
-        } else {
-            return "";
         }
+        return StringUtils.EMPTY;
     }
 
     private static String removeTbody(final Document htmlDocument, final String param) {
@@ -251,14 +249,13 @@ public class HTMLUtils {
     }
 
     private static String removeTbody(final Element table) {
-        Element element = table.selectFirst("tbody");
+        final Element element = table.selectFirst("tbody");
         if (element != null) {
             final String tbodyContent = element.html();
             table.selectFirst("tbody").remove();
             return tbodyContent;
-        } else {
-            return "";
         }
+        return StringUtils.EMPTY;
     }
 
     public static boolean findQRCodeImageTags(final File template) throws IOException {
