@@ -339,7 +339,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
         }
         if (footerHtmlFile != null) {
             command.add("--footer-spacing");
-            command.add("5");
+            command.add("1");
             command.add("--footer-html");
             command.add(footerHtmlFile.getAbsolutePath());
         }
