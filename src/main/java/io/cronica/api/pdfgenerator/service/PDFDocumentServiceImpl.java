@@ -67,12 +67,10 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final DocumentCertificate docCert = getDocumentCertificateByID(redisDocument.getDocumentID());
         if ( !docCert.getIsStructured() ) {
             return downloadNonStructuredDocument(redisDocument);
-        }
-        else {
+        } else {
             try {
                 return generateStructuredDocument(redisDocument);
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 log.error("[SERVICE] exception while generating PDF of structured document", ex);
                 return new Document();
             }

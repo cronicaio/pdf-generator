@@ -1,8 +1,9 @@
 package io.cronica.api.pdfgenerator.service;
 
-import com.github.kklisura.cdt.services.ChromeService;
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
+import io.cronica.api.pdfgenerator.component.metrics.MethodID;
+import io.cronica.api.pdfgenerator.component.metrics.MetricsLogger;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 
 import java.io.InputStream;
 
@@ -26,6 +28,8 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
 
     private final RedisDAO redisDAO;
 
+    private final MetricsLogger metricsLogger;
+
     private final AWSS3BucketAdapter awss3BucketAdapter;
 
     private final TemplateTransactionService templateTransactionService;
@@ -36,26 +40,32 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
 
     private final IssuerRegistryTransactionService issuerRegistryTransactionService;
 
-    private final ChromeService chromeService;
-
     /**
      * @see StructuredPDFGenerator#generateAndSave(String)
      */
     public void generateAndSave(final String documentID) {
+        final StopWatch stopWatch = new StopWatch();
         try {
             final DocumentCertificate docCert = getDocumentCertificateByID(documentID);
             final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCert);
             templateHandler.generateTemplate();
             templateHandler.downloadAdditionalFiles();
+
             final InputStream documentInputStream = templateHandler.generatePDFDocument();
+            this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
+            this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
 
             // encrypt PDF before caching to Redis
             final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
             final byte[] encryptedDocument = ChaCha20Utils.encrypt(documentBytes);
             this.redisDAO.savePDF(encryptedDocument, documentID);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF with '{}' ID", documentID, ex);
+            this.metricsLogger.incrementCount(MethodID.COUNT_OF_FAILED_DOCUMENT_GENERATIONS);
+        } finally {
+            if (stopWatch.isRunning()) {
+                stopWatch.stop();
+            }
         }
     }
 
