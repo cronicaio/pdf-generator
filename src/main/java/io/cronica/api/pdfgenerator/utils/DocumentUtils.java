@@ -1,5 +1,6 @@
 package io.cronica.api.pdfgenerator.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -109,7 +110,7 @@ public class DocumentUtils {
 
     public static Map<String, Object> convertJsonStringToMap(final String jsonString) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(jsonString, Map.class);
+        return mapper.readValue(jsonString, new TypeReference<Map<String, Object>>() {});
     }
 
     public static String convertMapToJsonString(final Map<String, Object> map) throws IOException {
