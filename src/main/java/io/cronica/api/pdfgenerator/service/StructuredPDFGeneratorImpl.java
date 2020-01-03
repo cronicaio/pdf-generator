@@ -46,15 +46,23 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     public void generateAndSave(final String documentID) {
         final StopWatch stopWatch = new StopWatch();
         try {
-            final DocumentCertificate docCert = getDocumentCertificateByID(documentID);
-            final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCert);
-            templateHandler.generateTemplate();
-            templateHandler.downloadAdditionalFiles();
+            InputStream documentInputStream;
+            if (DocumentUtils.isValidDocumentID(documentID)) {
+                final DocumentCertificate docCert = getDocumentCertificateByID(documentID);
+                final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCert);
+                templateHandler.generateTemplate();
+                templateHandler.downloadAdditionalFiles();
 
-            final InputStream documentInputStream = templateHandler.generatePDFDocument();
-            this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
-            this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
+                documentInputStream = templateHandler.generatePDFDocument();
+                this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
+                this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
+            } else {
+                final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID);
+                templateHandler.generateTemplate();
+                templateHandler.downloadAdditionalFiles();
 
+                documentInputStream = templateHandler.generatePDFDocument();
+            }
             // encrypt PDF before caching to Redis
             final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
             final byte[] encryptedDocument = ChaCha20Utils.encrypt(documentBytes);
@@ -95,6 +103,12 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
         else {
             throw new RuntimeException("File with " + fileType + " extension is not supporting");
         }
+    }
+
+    private TemplateHandler getHTMLTemplateHandlerForThumbnail(final String templateId) {
+        return new HTMLTemplateHandler(
+                this.repeater, this.awss3BucketAdapter, this.issuerRegistryTransactionService,
+                this.templateTransactionService, templateId);
     }
 
     private String getFileType(final DocumentCertificate docCertificate) {

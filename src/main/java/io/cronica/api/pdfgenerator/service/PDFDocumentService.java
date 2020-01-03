@@ -12,4 +12,13 @@ public interface PDFDocumentService {
      * @return {@link Document} object
      */
     Document generatePDFDocument(String uuid);
+
+    /**
+     * Generate example PDF document by given template id aka contract address
+     *
+     * @param templateAddress
+     *          - template contract address
+     * @return {@link Document} object
+     */
+    Document generateExampleDocument(String templateAddress);
 }

@@ -72,6 +72,24 @@ public class HTMLTemplateHandler implements TemplateHandler {
         this.dataJson = documentTransactionService.getStructuredData(documentAddress);
     }
 
+    public HTMLTemplateHandler(
+            Repeater repeater,
+            AWSS3BucketAdapter awss3BucketAdapter,
+            IssuerRegistryTransactionService issuerService,
+            TemplateTransactionService templateTransactionService,
+            String templateID
+    ) {
+        this.repeater = repeater;
+        this.awss3BucketAdapter = awss3BucketAdapter;
+        this.issuerService = issuerService;
+        this.transactionService = templateTransactionService;
+
+        this.documentID = templateID;
+        this.templateID = templateID;
+        this.bankCode = "";
+        this.dataJson = "{}";
+    }
+
     /**
      * @see TemplateHandler#generateTemplate()
      */
@@ -228,15 +246,19 @@ public class HTMLTemplateHandler implements TemplateHandler {
         HTMLUtils.importFontsIntoHtml(templateWithData, fontEntityList);
     }
 
-    private void insertQrCodeIfNeeded() throws Exception {
-        final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
-        if (qrCodeImageTagsFound) {
-            final String linkToPdfDocument = getLinkToPdfDocument();
-            final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
+    private void insertQrCodeIfNeeded() {
+        try {
+            final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
+            if (qrCodeImageTagsFound) {
+                final String linkToPdfDocument = getLinkToPdfDocument();
+                final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
 
-            HTMLUtils.insertQrCodeImagePathAndAltText(
-                    qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
-            );
+                HTMLUtils.insertQrCodeImagePathAndAltText(
+                        qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
+                );
+            }
+        } catch (Exception e) {
+            log.error("[SERVICE] Error inserting QR code image", e);
         }
     }
 

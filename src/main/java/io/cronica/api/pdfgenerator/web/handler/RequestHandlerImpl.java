@@ -14,7 +14,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.web3j.utils.Numeric;
 import reactor.core.publisher.Mono;
+
+import java.util.Base64;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ import reactor.core.publisher.Mono;
 public class RequestHandlerImpl implements RequestHandler {
 
     private static final String UUID_PATH_VARIABLE = "uuid";
+    private static final String TEMPLATE_ID_VARIABLE = "templateId";
 
     private final PDFDocumentService pdfDocumentService;
 
@@ -40,6 +44,19 @@ public class RequestHandlerImpl implements RequestHandler {
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))
                 .map(this.pdfDocumentService::generatePDFDocument)
+                .flatMap(this::generateResponse)
+                .onErrorResume(this::handleError);
+    }
+
+    /**
+     * @see RequestHandler#generateThumbnail(ServerRequest)
+     */
+    @Override
+    public Mono<ServerResponse> generateThumbnail(final ServerRequest serverRequest) {
+        return Mono.justOrEmpty(serverRequest.pathVariable(TEMPLATE_ID_VARIABLE))
+                .map(Base64.getDecoder()::decode)
+                .map(Numeric::toHexString)
+                .map(this.pdfDocumentService::generateExampleDocument)
                 .flatMap(this::generateResponse)
                 .onErrorResume(this::handleError);
     }

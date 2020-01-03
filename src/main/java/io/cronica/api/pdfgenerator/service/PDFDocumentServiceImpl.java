@@ -77,6 +77,16 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         }
     }
 
+    @Override
+    public Document generateExampleDocument(final String templateAddress) {
+        try {
+            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress));
+        } catch (Exception ex) {
+            log.error("[SERVICE] exception while generating PDF of structured document", ex);
+            return new Document();
+        }
+    }
+
     private void validateUUID(final String uuid) {
         if (StringUtils.isEmpty(uuid)) {
             log.info("[SERVICE] UUID is empty");
