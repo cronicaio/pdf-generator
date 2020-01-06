@@ -1,5 +1,6 @@
 package io.cronica.api.pdfgenerator.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -9,6 +10,7 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.web3j.abi.datatypes.Address;
 import org.web3j.crypto.Hash;
 import org.web3j.utils.Numeric;
 
@@ -22,20 +24,36 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class DocumentUtils {
+
+    private static final int DOCUMENT_ID_STRING_LENGTH = 82;
+    private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("\\p{XDigit}+");
 
     public static String getSha256(final byte[] bytes) {
         return Numeric.toHexStringNoPrefix(Hash.sha256(bytes));
     }
 
     public static String readDocumentAddress(final String documentID) {
-        if (StringUtils.isEmpty(documentID) || !documentID.substring(0, 2).equals("0x")) {
+        if (!isValidDocumentID(documentID)) {
             log.info("[UTILITY] sent string is not ID of document");
             throw new InvalidRequestException("Sent string is not ID of document");
         }
-        return StringUtils.substring(documentID, 0, 42);
+        return StringUtils.substring(documentID, 0, Address.LENGTH_IN_HEX + 2);
+    }
+
+    public static boolean isValidDocumentID(final String documentID) {
+        return StringUtils.isNotEmpty(documentID) && isHexadecimal(documentID) &&
+                documentID.substring(0, 2).equals("0x") &&
+                documentID.length() == DOCUMENT_ID_STRING_LENGTH;
+    }
+
+    public static boolean isHexadecimal(String input) {
+        final Matcher matcher = HEXADECIMAL_PATTERN.matcher(input);
+        return matcher.matches();
     }
 
     public static Map<String, Object> modifyParameters(final Map<String, Object> initialMap) {
@@ -100,7 +118,7 @@ public class DocumentUtils {
 
     public static Map<String, Object> convertJsonStringToMap(final String jsonString) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(jsonString, Map.class);
+        return mapper.readValue(jsonString, new TypeReference<Map<String, Object>>() {});
     }
 
     public static String convertMapToJsonString(final Map<String, Object> map) throws IOException {
