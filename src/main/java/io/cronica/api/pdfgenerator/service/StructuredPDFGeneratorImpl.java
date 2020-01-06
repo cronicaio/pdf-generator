@@ -108,7 +108,7 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private TemplateHandler getHTMLTemplateHandlerForThumbnail(final String templateId) {
         return new HTMLTemplateHandler(
                 this.repeater, this.awss3BucketAdapter, this.issuerRegistryTransactionService,
-                this.templateTransactionService, templateId);
+                this.templateTransactionService, templateId, "{}");
     }
 
     private String getFileType(final DocumentCertificate docCertificate) {

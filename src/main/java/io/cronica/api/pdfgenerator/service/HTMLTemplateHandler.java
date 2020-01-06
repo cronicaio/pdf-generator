@@ -77,7 +77,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
             AWSS3BucketAdapter awss3BucketAdapter,
             IssuerRegistryTransactionService issuerService,
             TemplateTransactionService templateTransactionService,
-            String templateID
+            String templateID,
+            String jsonData
     ) {
         this.repeater = repeater;
         this.awss3BucketAdapter = awss3BucketAdapter;
@@ -87,7 +88,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
         this.documentID = templateID;
         this.templateID = templateID;
         this.bankCode = "";
-        this.dataJson = "{}";
+        this.dataJson = jsonData;
     }
 
     /**
