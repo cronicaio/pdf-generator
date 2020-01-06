@@ -54,7 +54,7 @@ public class RequestHandlerImpl implements RequestHandler {
     @Override
     public Mono<ServerResponse> generateThumbnail(final ServerRequest serverRequest) {
         return Mono.justOrEmpty(serverRequest.pathVariable(TEMPLATE_ID_VARIABLE))
-                .map(Base64.getDecoder()::decode)
+                .map(Base64.getUrlDecoder()::decode)
                 .map(Numeric::toHexString)
                 .map(this.pdfDocumentService::generateExampleDocument)
                 .flatMap(this::generateResponse)
