@@ -24,11 +24,14 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class DocumentUtils {
 
     private static final int DOCUMENT_ID_STRING_LENGTH = 82;
+    private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("\\p{XDigit}+");
 
     public static String getSha256(final byte[] bytes) {
         return Numeric.toHexStringNoPrefix(Hash.sha256(bytes));
@@ -43,9 +46,14 @@ public class DocumentUtils {
     }
 
     public static boolean isValidDocumentID(final String documentID) {
-        return StringUtils.isNotEmpty(documentID) &&
+        return StringUtils.isNotEmpty(documentID) && isHexadecimal(documentID) &&
                 documentID.substring(0, 2).equals("0x") &&
                 documentID.length() == DOCUMENT_ID_STRING_LENGTH;
+    }
+
+    public static boolean isHexadecimal(String input) {
+        final Matcher matcher = HEXADECIMAL_PATTERN.matcher(input);
+        return matcher.matches();
     }
 
     public static Map<String, Object> modifyParameters(final Map<String, Object> initialMap) {
