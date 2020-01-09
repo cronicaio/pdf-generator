@@ -15,6 +15,14 @@ public interface DocumentObserver {
     void putDocumentIDToObserve(String documentID);
 
     /**
+     * Register ID of document with data in ZooKeeper for further observing its status.
+     *
+     * @param documentID
+     *          - unique ID of document
+     */
+    void putDocumentIDToObserve(String documentID, String data);
+
+    /**
      * Get status of document.
      *
      * @param documentID

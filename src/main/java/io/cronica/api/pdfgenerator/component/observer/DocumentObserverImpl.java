@@ -48,11 +48,14 @@ public class DocumentObserverImpl implements DocumentObserver {
                     .stream()
                     .peek(documentID -> {
                         final String path = path(documentID);
-                        final byte[] data = readDataByPath(path);
+                        final byte[] data = readDataByPath(path).orElseThrow(() -> new IllegalStateException("Data not found"));
                         if ( Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data) ) {
                             setStatus(path, DocumentStatus.PENDING);
                             CompletableFuture.runAsync(() -> {
-                                this.structuredPDFGenerator.generateAndSave(documentID);
+                                final String jsonData = readDataByPath(dataPath(documentID))
+                                        .map(String::new)
+                                        .orElse(null);
+                                this.structuredPDFGenerator.generateAndSave(documentID, jsonData);
                                 setStatus(path, DocumentStatus.GENERATED);
                             }).exceptionally(ex -> {
                                 log.error("[OBSERVER] Error while generating document", ex);
@@ -96,6 +99,22 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
+    /**
+     * @see DocumentObserver#putDocumentIDToObserve(String, String)
+     */
+    @Override
+    public void putDocumentIDToObserve(final String documentID, final String data) {
+        this.putDocumentIDToObserve(documentID);
+        final String dataPath = dataPath(documentID);
+        log.debug("[OBSERVER] put data into '{}' path", dataPath);
+        try {
+            this.curator.create().forPath(dataPath, data.getBytes());
+        }
+        catch (Exception ex) {
+            log.error("[OBSERVER] exception while registering document by '{}' path", dataPath);
+        }
+    }
+
     private boolean exists(final String path) {
         try {
             final Stat stat = this.curator.checkExists().forPath(path);
@@ -106,10 +125,10 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    private byte[] readDataByPath(final String path) {
+    private Optional<byte[]> readDataByPath(final String path) {
         log.debug("[OBSERVER] reading data by '{}' path", path);
         try {
-            return this.curator.getData().forPath(path);
+            return Optional.of(this.curator.getData().forPath(path));
         }
         catch (KeeperException.NoNodeException ex) {
             log.debug("[OBSERVER] ZNode by '{}' path does not exists", path);
@@ -117,7 +136,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         catch (Exception ex) {
             log.error("[OBSERVER] exception while reading data by '{}' path", path, ex);
         }
-        return null;
+        return Optional.empty();
     }
 
     /**
@@ -128,7 +147,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         final String path = path(documentID);
         try {
             if ( exists(path) ) {
-                final byte[] data = readDataByPath(path);
+                final byte[] data = readDataByPath(path).orElseThrow();
                 if ( Arrays.equals(data, DocumentStatus.GENERATED.getRawStatus()) ) {
                     return Optional.of(DocumentStatus.GENERATED);
                 }
@@ -154,7 +173,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         final String path = path(documentID);
         log.debug("[OBSERVER] deleting path '{}'", path);
         try {
-            this.curator.delete().forPath(path);
+            this.curator.delete().deletingChildrenIfNeeded().forPath(path);
         }
         catch (KeeperException.NoNodeException ex) {
             log.debug("[OBSERVER] ZNode under '{}' path does not exists", path);
@@ -166,5 +185,9 @@ public class DocumentObserverImpl implements DocumentObserver {
 
     private String path(final String documentID) {
         return Constants.DOCUMENTS_ROOT + Constants.SEPARATOR + documentID;
+    }
+
+    private String dataPath(final String documentID) {
+        return path(documentID) + Constants.SEPARATOR + "data";
     }
 }

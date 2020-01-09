@@ -17,6 +17,7 @@ import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 
+import javax.annotation.Nullable;
 import java.io.InputStream;
 
 @Slf4j
@@ -41,9 +42,9 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private final IssuerRegistryTransactionService issuerRegistryTransactionService;
 
     /**
-     * @see StructuredPDFGenerator#generateAndSave(String)
+     * @see StructuredPDFGenerator#generateAndSave(String, String)
      */
-    public void generateAndSave(final String documentID) {
+    public void generateAndSave(final String documentID, @Nullable final String data) {
         final StopWatch stopWatch = new StopWatch();
         try {
             InputStream documentInputStream;
@@ -57,7 +58,7 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
                 this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
                 this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
             } else {
-                final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID);
+                final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID, data);
                 templateHandler.generateTemplate();
                 templateHandler.downloadAdditionalFiles();
 
@@ -105,10 +106,10 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
         }
     }
 
-    private TemplateHandler getHTMLTemplateHandlerForThumbnail(final String templateId) {
+    private TemplateHandler getHTMLTemplateHandlerForThumbnail(final String templateId, final String jsonData) {
         return new HTMLTemplateHandler(
                 this.repeater, this.awss3BucketAdapter, this.issuerRegistryTransactionService,
-                this.templateTransactionService, templateId, "{}");
+                this.templateTransactionService, templateId, jsonData != null ? jsonData : "{}");
     }
 
     private String getFileType(final DocumentCertificate docCertificate) {

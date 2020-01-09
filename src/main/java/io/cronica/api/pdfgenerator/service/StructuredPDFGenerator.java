@@ -1,5 +1,7 @@
 package io.cronica.api.pdfgenerator.service;
 
+import javax.annotation.Nullable;
+
 public interface StructuredPDFGenerator {
 
     /**
@@ -8,5 +10,5 @@ public interface StructuredPDFGenerator {
      * @param documentID
      *          - unique ID of document
      */
-    void generateAndSave(String documentID);
+    void generateAndSave(String documentID, @Nullable String data);
 }

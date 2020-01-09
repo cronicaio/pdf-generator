@@ -6,6 +6,7 @@ import io.cronica.api.pdfgenerator.exception.*;
 import io.cronica.api.pdfgenerator.service.PDFDocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ import org.web3j.utils.Numeric;
 import reactor.core.publisher.Mono;
 
 import java.util.Base64;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -57,6 +59,19 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(Base64.getUrlDecoder()::decode)
                 .map(Numeric::toHexString)
                 .map(this.pdfDocumentService::generateExampleDocument)
+                .flatMap(this::generateResponse)
+                .onErrorResume(this::handleError);
+    }
+
+    /**
+     * @see RequestHandler#generatePreview(ServerRequest)
+     */
+    @Override
+    public Mono<ServerResponse> generatePreview(final ServerRequest serverRequest) {
+        final String templateId = serverRequest.pathVariable(TEMPLATE_ID_VARIABLE);
+        final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
+        return serverRequest.bodyToMono(String.class)
+                .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
                 .flatMap(this::generateResponse)
                 .onErrorResume(this::handleError);
     }

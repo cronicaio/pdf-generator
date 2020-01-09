@@ -28,4 +28,13 @@ public interface RequestHandler {
      * @return {@link ServerResponse} object with response data wrapped by {@link Mono} object
      */
     Mono<ServerResponse> generateThumbnail(ServerRequest serverRequest);
+
+    /**
+     * Generate PDF document with custom data and return response client as preview pdf.
+     *
+     * @param serverRequest
+     *          - {@link ServerRequest} object with request data
+     * @return {@link ServerResponse} object with response data wrapped by {@link Mono} object
+     */
+    Mono<ServerResponse> generatePreview(ServerRequest serverRequest);
 }

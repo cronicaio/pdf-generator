@@ -21,4 +21,15 @@ public interface PDFDocumentService {
      * @return {@link Document} object
      */
     Document generateExampleDocument(String templateAddress);
+
+    /**
+     * Generate preview PDF document by given template id aka contract address
+     *
+     * @param templateAddress
+     *          - template contract address
+     * @param jsonData
+     *          - custom json data that represents a document
+     * @return {@link Document} object
+     */
+    Document generatePreviewDocument(String templateAddress, String jsonData);
 }

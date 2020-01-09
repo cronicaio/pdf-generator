@@ -20,6 +20,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +70,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             return downloadNonStructuredDocument(redisDocument);
         } else {
             try {
-                return generateStructuredDocument(redisDocument);
+                return generateStructuredDocument(redisDocument, null);
             } catch (Exception ex) {
                 log.error("[SERVICE] exception while generating PDF of structured document", ex);
                 return new Document();
@@ -77,10 +78,26 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         }
     }
 
+    /**
+     * @see PDFDocumentService#generateExampleDocument(String)
+     */
     @Override
     public Document generateExampleDocument(final String templateAddress) {
         try {
-            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress));
+            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress), null);
+        } catch (Exception ex) {
+            log.error("[SERVICE] exception while generating PDF of structured document", ex);
+            return new Document();
+        }
+    }
+
+    /**
+     * @see PDFDocumentService#generatePreviewDocument(String, String)
+     */
+    @Override
+    public Document generatePreviewDocument(final String templateAddress, final String jsonData) {
+        try {
+            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress), jsonData);
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
             return new Document();
@@ -137,12 +154,16 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
-    private Document generateStructuredDocument(final RedisDocument redisDocument) {
+    private Document generateStructuredDocument(final RedisDocument redisDocument, @Nullable final String data) {
         final String documentID = redisDocument.getDocumentID();
 
         // if PDF does not found in Redis then generate it first
         if ( !this.redisDAO.exists(documentID) ) {
-            this.documentObserver.putDocumentIDToObserve(documentID);
+            if (data != null) {
+                this.documentObserver.putDocumentIDToObserve(documentID, data);
+            } else {
+                this.documentObserver.putDocumentIDToObserve(documentID);
+            }
             waitForDocument(documentID);
             this.documentObserver.deletePathWith(documentID);
         }
