@@ -108,6 +108,13 @@ public class StructuredDoc extends Contract {
         return executeRemoteCallSingleValueReturn(function);
     }
 
+    public RemoteCall<Utf8String> structuredDataOld(Uint256 param0) {
+        final Function function = new Function(FUNC_STRUCTUREDDATA,
+                Arrays.<Type>asList(param0),
+                Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>() {}));
+        return executeRemoteCallSingleValueReturn(function);
+    }
+
     public RemoteCall<TransactionReceipt> pushStructuredData(DynamicBytes _structuredData) {
         final Function function = new Function(
                 FUNC_PUSHSTRUCTUREDDATA,
