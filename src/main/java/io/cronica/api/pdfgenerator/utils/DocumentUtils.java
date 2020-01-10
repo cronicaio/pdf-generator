@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
 public class DocumentUtils {
 
     private static final int DOCUMENT_ID_STRING_LENGTH = 82;
-    private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("\\p{XDigit}+");
+    private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("0x\\p{XDigit}+");
 
     public static String getSha256(final byte[] bytes) {
         return Numeric.toHexStringNoPrefix(Hash.sha256(bytes));
@@ -47,7 +47,6 @@ public class DocumentUtils {
 
     public static boolean isValidDocumentID(final String documentID) {
         return StringUtils.isNotEmpty(documentID) && isHexadecimal(documentID) &&
-                documentID.substring(0, 2).equals("0x") &&
                 documentID.length() == DOCUMENT_ID_STRING_LENGTH;
     }
 
