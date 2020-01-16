@@ -11,6 +11,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyExtractors;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -78,9 +79,10 @@ public class RequestHandlerImpl implements RequestHandler {
 
     @Override
     public Mono<ServerResponse> generatePreview(ServerRequest serverRequest) {
-        return serverRequest.body(BodyExtractors.toDataBuffers())
-                .name(TEMPLATE_FILE)
-                .next()
+        return serverRequest.body(BodyExtractors.toMultipartData())
+                .map(MultiValueMap::toSingleValueMap)
+                .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
+                .flatMap(m -> m.content().next())
                 .map(this.pdfDocumentService::generatePreviewTemplate)
                 .flatMap(this::generateResponse)
                 .onErrorResume(this::handleError);
