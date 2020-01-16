@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -82,7 +83,7 @@ public class RequestHandlerImpl implements RequestHandler {
         return serverRequest.body(BodyExtractors.toMultipartData())
                 .map(MultiValueMap::toSingleValueMap)
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
-                .flatMap(m -> m.content().next())
+                .flatMap(m -> DataBufferUtils.join(m.content()))
                 .map(this.pdfDocumentService::generatePreviewTemplate)
                 .flatMap(this::generateResponse)
                 .onErrorResume(this::handleError);
