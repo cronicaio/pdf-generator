@@ -19,6 +19,7 @@ import org.springframework.util.StopWatch;
 
 import javax.annotation.Nullable;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -75,6 +76,22 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
             if (stopWatch.isRunning()) {
                 stopWatch.stop();
             }
+        }
+    }
+
+    /**
+     * @see StructuredPDFGenerator#generate(ByteBuffer)
+     */
+    @Override
+    public byte[] generate(ByteBuffer templateZip) {
+        try {
+            final HTMLTemplateHandlerChainless templateHandlerChainless = new HTMLTemplateHandlerChainless(templateZip);
+            templateHandlerChainless.generateTemplate();
+            final InputStream documentInputStream = templateHandlerChainless.generatePDFDocument();
+            return IOUtils.toByteArray(documentInputStream);
+        } catch (Exception ex) {
+            log.error("[SERVICE] exception while generating preview PDF", ex);
+            return new byte[0];
         }
     }
 

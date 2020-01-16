@@ -1,6 +1,7 @@
 package io.cronica.api.pdfgenerator.service;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 public interface StructuredPDFGenerator {
 
@@ -11,4 +12,12 @@ public interface StructuredPDFGenerator {
      *          - unique ID of document
      */
     void generateAndSave(String documentID, @Nullable String data);
+
+    /**
+     * Generate PDF document using zipped template.
+     *
+     * @param templateZip
+     *          - zip archive of template contents
+     */
+    byte[] generate(ByteBuffer templateZip);
 }

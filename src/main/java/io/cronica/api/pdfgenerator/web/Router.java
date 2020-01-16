@@ -22,6 +22,7 @@ public class Router {
         return route(GET("/"), this.requestHandler::healthCheck)
                 .andRoute(GET("/v1/pdf/{uuid}"), this.requestHandler::generatePDF)
                 .andRoute(GET("/v1/pdf/thumbnail/{templateId}"), this.requestHandler::generateThumbnail)
-                .andRoute(POST("/v1/pdf/preview/{templateId}"), this.requestHandler::generatePreview);
+                .andRoute(POST("/v1/pdf/preview/{templateId}"), this.requestHandler::generateDocumentPreview)
+                .andRoute(POST("/v1/pdf/preview"), this.requestHandler::generatePreview);
     }
 }

@@ -1,6 +1,7 @@
 package io.cronica.api.pdfgenerator.service;
 
 import io.cronica.api.pdfgenerator.component.entity.Document;
+import org.springframework.core.io.buffer.DataBuffer;
 
 public interface PDFDocumentService {
 
@@ -32,4 +33,13 @@ public interface PDFDocumentService {
      * @return {@link Document} object
      */
     Document generatePreviewDocument(String templateAddress, String jsonData);
+
+    /**
+     * Generate preview PDF document by given template id aka contract address
+     *
+     * @param dataBuffer
+     *          - data buffer with template zip content
+     * @return {@link Document} object
+     */
+    Document generatePreviewTemplate(DataBuffer dataBuffer);
 }

@@ -6,12 +6,12 @@ import io.cronica.api.pdfgenerator.exception.*;
 import io.cronica.api.pdfgenerator.service.PDFDocumentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyExtractors;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
@@ -19,7 +19,6 @@ import org.web3j.utils.Numeric;
 import reactor.core.publisher.Mono;
 
 import java.util.Base64;
-import java.util.stream.StreamSupport;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -64,14 +63,23 @@ public class RequestHandlerImpl implements RequestHandler {
     }
 
     /**
-     * @see RequestHandler#generatePreview(ServerRequest)
+     * @see RequestHandler#generateDocumentPreview(ServerRequest)
      */
     @Override
-    public Mono<ServerResponse> generatePreview(final ServerRequest serverRequest) {
+    public Mono<ServerResponse> generateDocumentPreview(final ServerRequest serverRequest) {
         final String templateId = serverRequest.pathVariable(TEMPLATE_ID_VARIABLE);
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(String.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
+                .flatMap(this::generateResponse)
+                .onErrorResume(this::handleError);
+    }
+
+    @Override
+    public Mono<ServerResponse> generatePreview(ServerRequest serverRequest) {
+        return serverRequest.body(BodyExtractors.toDataBuffers())
+                .next()
+                .map(this.pdfDocumentService::generatePreviewTemplate)
                 .flatMap(this::generateResponse)
                 .onErrorResume(this::handleError);
     }

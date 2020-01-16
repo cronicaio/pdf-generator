@@ -14,16 +14,19 @@ import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
 import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import io.cronica.api.pdfgenerator.utils.ChaCha20Utils;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
+import io.cronica.api.pdfgenerator.utils.FileUtility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +53,8 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     private final DocumentTransactionService documentTransactionService;
 
     private final DocumentCertificateRepository documentCertificateRepository;
+
+    private final StructuredPDFGenerator structuredPDFGenerator;
 
     /**
      * @see PDFDocumentService#generatePDFDocument(String)
@@ -102,6 +107,13 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
             return new Document();
         }
+    }
+
+    @Override
+    public Document generatePreviewTemplate(final DataBuffer dataBuffer) {
+        FileUtility.validateZipArchive(dataBuffer);
+        final ByteBuffer byteBuffer = dataBuffer.readPosition(0).asByteBuffer();
+        return Document.newInstance("preview.pdf", this.structuredPDFGenerator.generate(byteBuffer));
     }
 
     private void validateUUID(final String uuid) {
