@@ -27,6 +27,7 @@ public class RequestHandlerImpl implements RequestHandler {
 
     private static final String UUID_PATH_VARIABLE = "uuid";
     private static final String TEMPLATE_ID_VARIABLE = "templateId";
+    private static final String TEMPLATE_FILE = "file";
 
     private final PDFDocumentService pdfDocumentService;
 
@@ -78,6 +79,7 @@ public class RequestHandlerImpl implements RequestHandler {
     @Override
     public Mono<ServerResponse> generatePreview(ServerRequest serverRequest) {
         return serverRequest.body(BodyExtractors.toDataBuffers())
+                .name(TEMPLATE_FILE)
                 .next()
                 .map(this.pdfDocumentService::generatePreviewTemplate)
                 .flatMap(this::generateResponse)
