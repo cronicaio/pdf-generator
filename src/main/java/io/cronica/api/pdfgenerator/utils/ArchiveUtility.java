@@ -90,10 +90,9 @@ public class ArchiveUtility {
     private static void writeToFileFromStream(
             final FileOutputStream fos, final ZipInputStream zis)
             throws IOException {
-        int bytesRead = zis.read(BUFFER);
-        while (bytesRead != -1) {
+        int bytesRead;
+        while ((bytesRead = zis.read(BUFFER)) != -1) {
             fos.write(BUFFER, 0, bytesRead);
-            bytesRead = zis.read(BUFFER);
         }
     }
 }
