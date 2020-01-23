@@ -4,6 +4,7 @@ import io.cronica.api.pdfgenerator.component.dto.APIErrorResponseDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.exception.*;
 import io.cronica.api.pdfgenerator.service.PDFDocumentService;
+import io.cronica.api.pdfgenerator.utils.PDFUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
@@ -20,6 +21,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.web3j.utils.Numeric;
 import reactor.core.publisher.Mono;
 
+import java.awt.image.BufferedImage;
 import java.util.Base64;
 
 @Slf4j
@@ -48,7 +50,7 @@ public class RequestHandlerImpl implements RequestHandler {
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))
                 .map(this.pdfDocumentService::generatePDFDocument)
-                .flatMap(this::generateResponse)
+                .flatMap(this::generatePDFResponse)
                 .onErrorResume(this::handleError);
     }
 
@@ -61,7 +63,8 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(Base64.getUrlDecoder()::decode)
                 .map(Numeric::toHexString)
                 .map(this.pdfDocumentService::generateExampleDocument)
-                .flatMap(this::generateResponse)
+                .map(this::convertPDFDocumentToPNG)
+                .flatMap(this::generatePNGResponse)
                 .onErrorResume(this::handleError);
     }
 
@@ -74,7 +77,7 @@ public class RequestHandlerImpl implements RequestHandler {
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(String.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
-                .flatMap(this::generateResponse)
+                .flatMap(this::generatePDFResponse)
                 .onErrorResume(this::handleError);
     }
 
@@ -85,17 +88,32 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
                 .flatMap(m -> DataBufferUtils.join(m.content()))
                 .map(this.pdfDocumentService::generatePreviewTemplate)
-                .flatMap(this::generateResponse)
+                .flatMap(this::generatePDFResponse)
                 .onErrorResume(this::handleError);
     }
 
-    private Mono<ServerResponse> generateResponse(final Document document) {
+    private Mono<ServerResponse> generatePDFResponse(final Document document) {
+        return generateFileResponse(document, MediaType.APPLICATION_PDF);
+    }
+
+
+    private Mono<ServerResponse> generatePNGResponse(final Document document) {
+        return generateFileResponse(document, MediaType.IMAGE_PNG);
+    }
+
+    private Mono<ServerResponse> generateFileResponse(final Document document, final MediaType mediaType) {
         final Resource resource = new ByteArrayResource(document.getFile());
         return ServerResponse
                 .ok()
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(mediaType)
                 .header("Content-Disposition", "attachment; filename=" + document.getFileName())
                 .body(BodyInserters.fromResource(resource));
+    }
+
+    private Document convertPDFDocumentToPNG(final Document document) {
+        BufferedImage bufferedImage = PDFUtils.convertPdfToImage(document.getFile());
+        BufferedImage scaledImage = PDFUtils.resize(bufferedImage, 420, 600);
+        return Document.newInstance(document.getFileName().replaceAll("pdf", "png"), PDFUtils.asPng(scaledImage).toByteArray());
     }
 
     private Mono<ServerResponse> handleError(final Throwable throwable) {
