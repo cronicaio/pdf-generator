@@ -20,11 +20,15 @@ import org.springframework.util.StopWatch;
 import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
+
+    private static final long TIME_TO_LIVE_HOURS = 24;
+    private static final long TIME_TO_LIVE_EXAMPLES_DAYS = 30;
 
     private final Repeater repeater;
 
@@ -49,6 +53,7 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
         final StopWatch stopWatch = new StopWatch();
         try {
             InputStream documentInputStream;
+            final Duration expire;
             if (DocumentUtils.isValidDocumentID(documentID)) {
                 final DocumentCertificate docCert = getDocumentCertificateByID(documentID);
                 final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCert);
@@ -58,17 +63,19 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
                 documentInputStream = templateHandler.generatePDFDocument();
                 this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
                 this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
+                expire = Duration.ofHours(TIME_TO_LIVE_HOURS);
             } else {
                 final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID, data);
                 templateHandler.generateTemplate();
                 templateHandler.downloadAdditionalFiles();
 
                 documentInputStream = templateHandler.generatePDFDocument();
+                expire = (data == null ? Duration.ofDays(TIME_TO_LIVE_EXAMPLES_DAYS) : Duration.ZERO);
             }
             // encrypt PDF before caching to Redis
             final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
             final byte[] encryptedDocument = ChaCha20Utils.encrypt(documentBytes);
-            this.redisDAO.savePDF(encryptedDocument, documentID);
+            this.redisDAO.savePDF(encryptedDocument, documentID, expire);
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF with '{}' ID", documentID, ex);
             this.metricsLogger.incrementCount(MethodID.COUNT_OF_FAILED_DOCUMENT_GENERATIONS);

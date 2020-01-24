@@ -7,14 +7,13 @@ import org.redisson.api.RBinaryStream;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
 @Component
 public class RedisDAOImpl implements RedisDAO {
-
-    private static final long TIME_TO_LIVE_HOURS = 24;
 
     private final RedissonClient redissonClient;
 
@@ -42,14 +41,14 @@ public class RedisDAOImpl implements RedisDAO {
     }
 
     /**
-     * @see RedisDAO#savePDF(byte[], String)
+     * @see RedisDAO#savePDF(byte[], String, Duration)
      */
     @Override
-    public boolean savePDF(final byte[] document, final String key) {
+    public boolean savePDF(final byte[] document, final String key, final Duration expire) {
         log.info("[REDIS] saving PDF document under key '{}' ", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
         rBinaryStream.set(document);
-        rBinaryStream.expire(TIME_TO_LIVE_HOURS, TimeUnit.HOURS);
+        rBinaryStream.expire(expire.getSeconds(), TimeUnit.SECONDS);
         log.info("[REDIS] PDF document has been saved under '{}' key", key);
         return true;
     }

@@ -1,5 +1,7 @@
 package io.cronica.api.pdfgenerator.component.redis;
 
+import java.time.Duration;
+
 public interface RedisDAO {
 
     /**
@@ -27,9 +29,11 @@ public interface RedisDAO {
      *          - PDF document in the representation of byte array
      * @param key
      *          - key to PDF
+     * @param expire
+     *          - expiration of pdf document when it will be automatically deleted
      * @return {@code true} if successfully saved, {@code false} otherwise
      */
-    boolean savePDF(byte[] document, String key);
+    boolean savePDF(byte[] document, String key, Duration expire);
 
     /**
      * Read PDF document from Redis identified by document ID.
