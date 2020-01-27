@@ -80,7 +80,7 @@ public class RequestHandlerImpl implements RequestHandler {
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(String.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
-                .map(uid -> serverRequest.uriBuilder().scheme("").replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(uid -> serverRequest.uriBuilder().scheme(null).replacePath("/v1/pdf/" + uid.toString()).build())
                 .map(this::toLinkMap)
                 .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
@@ -93,7 +93,7 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
                 .flatMap(m -> DataBufferUtils.join(m.content()))
                 .map(this.pdfDocumentService::generatePreviewTemplate)
-                .map(uid -> serverRequest.uriBuilder().scheme("").replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(uid -> serverRequest.uriBuilder().scheme(null).replacePath("/v1/pdf/" + uid.toString()).build())
                 .map(this::toLinkMap)
                 .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
