@@ -44,7 +44,7 @@ public final class HTMLTemplateHandlerChainless implements TemplateHandler {
      */
     @Override
     public void generateTemplate() {
-        final Set<File> files = new HashSet<>(ArchiveUtility.decompressZip(this.buffer, "/temp/" + tempUid.toString() + "/"));
+        final Set<File> files = new HashSet<>(ArchiveUtility.decompressZip(this.buffer, "./temp/" + tempUid.toString() + "/"));
         this.template = FileUtility.validateTemplateFile(files);
         this.headerTemplate = FileUtility.validateHeaderFile(files);
         this.footerTemplate = FileUtility.validateFooterFile(files);

@@ -28,6 +28,8 @@ import static io.cronica.api.pdfgenerator.utils.Constants.*;
 @Scope("prototype")
 public class HTMLTemplateHandler implements TemplateHandler {
 
+    private static final String TEMPLATE_EXAMPLE = "TEMPLATE_EXAMPLE";
+
     private final String bankCode;
 
     private final String dataJson;
@@ -264,11 +266,15 @@ public class HTMLTemplateHandler implements TemplateHandler {
     }
 
     private String getLinkToPdfDocument() throws IssuerNotFoundException {
-        final Issuer issuer = this.issuerService.getIssuerByBankCode(this.bankCode);
+        if (this.bankCode.isEmpty()) {
+            return TEMPLATE_EXAMPLE;
+        } else {
+            final Issuer issuer = this.issuerService.getIssuerByBankCode(this.bankCode);
 
-        return issuer.getFrontEndLink()
-                + SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL
-                + this.documentID;
+            return issuer.getFrontEndLink()
+                    + SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL
+                    + this.documentID;
+        }
     }
 
     private File generateQrCodeImageFrom(final String linkToPdfDocument) {
