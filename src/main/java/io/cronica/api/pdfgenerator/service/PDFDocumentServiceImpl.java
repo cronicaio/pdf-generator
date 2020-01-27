@@ -102,6 +102,9 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     @Override
     public Document generateExampleDocument(final String templateAddress) {
         try {
+            if ( !this.redisDAO.exists(templateAddress) ) {
+                this.documentObserver.putDocumentIDToObserve(templateAddress);
+            }
             return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress));
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
