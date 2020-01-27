@@ -22,7 +22,10 @@ import org.web3j.utils.Numeric;
 import reactor.core.publisher.Mono;
 
 import java.awt.image.BufferedImage;
+import java.net.URI;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -77,7 +80,9 @@ public class RequestHandlerImpl implements RequestHandler {
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(String.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
-                .flatMap(this::generatePDFResponse)
+                .map(uid -> serverRequest.uriBuilder().replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(this::toLinkMap)
+                .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
     }
 
@@ -88,7 +93,9 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
                 .flatMap(m -> DataBufferUtils.join(m.content()))
                 .map(this.pdfDocumentService::generatePreviewTemplate)
-                .flatMap(this::generatePDFResponse)
+                .map(uid -> serverRequest.uriBuilder().replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(this::toLinkMap)
+                .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
     }
 
@@ -110,10 +117,21 @@ public class RequestHandlerImpl implements RequestHandler {
                 .body(BodyInserters.fromResource(resource));
     }
 
+    private Mono<ServerResponse> generateJSONResponse(final Map<String, URI> body) {
+        return ServerResponse
+                .ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .syncBody(body);
+    }
+
     private Document convertPDFDocumentToPNG(final Document document) {
         BufferedImage bufferedImage = PDFUtils.convertPdfToImage(document.getFile());
         BufferedImage scaledImage = PDFUtils.resize(bufferedImage, 420, 600);
         return Document.newInstance(document.getFileName().replaceAll("pdf", "png"), PDFUtils.asPng(scaledImage).toByteArray());
+    }
+
+    private Map<String, URI> toLinkMap(final URI uri) {
+        return Collections.singletonMap("link", uri);
     }
 
     private Mono<ServerResponse> handleError(final Throwable throwable) {

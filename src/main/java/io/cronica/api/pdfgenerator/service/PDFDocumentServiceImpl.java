@@ -21,13 +21,15 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
+import org.web3j.crypto.Hash;
 
-import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +39,8 @@ import java.util.concurrent.TimeUnit;
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final String PDF_DOCUMENT_TYPE = "pdf";
+    private static final String PDF_IN_MEMORY_DOCUMENT_TYPE = "pdf_in_memory";
+    private static final String PDF_EMPTY_DOCUMENT_TYPE = "pdf_empty";
     private static final int TIME_TO_SLEEP_MILLIS = 500;
     private static final int TRIALS = 120;
 
@@ -54,8 +58,6 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private final DocumentCertificateRepository documentCertificateRepository;
 
-    private final StructuredPDFGenerator structuredPDFGenerator;
-
     /**
      * @see PDFDocumentService#generatePDFDocument(String)
      */
@@ -65,22 +67,33 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         validateDocumentInRedis(uuid);
 
         final RedisDocument redisDocument = this.redisDAO.get(uuid);
-        if ( !redisDocument.getType().equals(PDF_DOCUMENT_TYPE) ) {
-            log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
-            throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
+        switch (redisDocument.getType()) {
+            case PDF_DOCUMENT_TYPE:
+                if ( !this.redisDAO.exists(redisDocument.getDocumentID()) ) {
+                    this.documentObserver.putDocumentIDToObserve(redisDocument.getDocumentID());
+                }
+                final DocumentCertificate docCert = getDocumentCertificateByID(redisDocument.getDocumentID());
+                if ( !docCert.getIsStructured() ) {
+                    return downloadNonStructuredDocument(redisDocument);
+                } else {
+                    try {
+                        return generateStructuredDocument(redisDocument);
+                    } catch (Exception ex) {
+                        log.error("[SERVICE] exception while generating PDF of structured document", ex);
+                        return new Document();
+                    }
+                }
+            case PDF_EMPTY_DOCUMENT_TYPE:
+            case PDF_IN_MEMORY_DOCUMENT_TYPE:
+                try {
+                    return generateStructuredDocument(redisDocument);
+                } catch (Exception ex) {
+                    log.error("[SERVICE] exception while generating PDF of structured document", ex);
+                    return new Document();
+                }
         }
-
-        final DocumentCertificate docCert = getDocumentCertificateByID(redisDocument.getDocumentID());
-        if ( !docCert.getIsStructured() ) {
-            return downloadNonStructuredDocument(redisDocument);
-        } else {
-            try {
-                return generateStructuredDocument(redisDocument, null);
-            } catch (Exception ex) {
-                log.error("[SERVICE] exception while generating PDF of structured document", ex);
-                return new Document();
-            }
-        }
+        log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
+        throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
     }
 
     /**
@@ -89,7 +102,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     @Override
     public Document generateExampleDocument(final String templateAddress) {
         try {
-            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress), null);
+            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress));
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
             return new Document();
@@ -100,20 +113,26 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
      * @see PDFDocumentService#generatePreviewDocument(String, String)
      */
     @Override
-    public Document generatePreviewDocument(final String templateAddress, final String jsonData) {
-        try {
-            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress), jsonData);
-        } catch (Exception ex) {
-            log.error("[SERVICE] exception while generating PDF of structured document", ex);
-            return new Document();
-        }
+    public UUID generatePreviewDocument(final String templateAddress, final String jsonData) {
+        final UUID uid = UUID.randomUUID();
+        this.documentObserver.putDocumentIDToObserve(templateAddress, jsonData);
+        this.redisDAO.save(uid.toString(), new RedisDocument(PDF_IN_MEMORY_DOCUMENT_TYPE, templateAddress), Duration.ofMinutes(1));
+        return uid;
     }
 
+    /**
+     * @see PDFDocumentService#generatePreviewTemplate(DataBuffer)
+     */
     @Override
-    public Document generatePreviewTemplate(final DataBuffer dataBuffer) {
+    public UUID generatePreviewTemplate(final DataBuffer dataBuffer) {
+        final UUID uid = UUID.randomUUID();
+        final String dataId = Hash.sha3(uid.toString());
         FileUtility.validateZipArchive(dataBuffer);
         final ByteBuffer byteBuffer = dataBuffer.readPosition(0).asByteBuffer();
-        return Document.newInstance("preview.pdf", this.structuredPDFGenerator.generate(byteBuffer));
+        this.redisDAO.save(uid.toString(), new RedisDocument(PDF_EMPTY_DOCUMENT_TYPE, dataId), StructuredPDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
+        this.redisDAO.saveData(byteBuffer.array(), dataId, StructuredPDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
+        this.documentObserver.putDocumentIDToObserve(dataId);
+        return uid;
     }
 
     private void validateUUID(final String uuid) {
@@ -166,21 +185,12 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
     }
 
-    private Document generateStructuredDocument(final RedisDocument redisDocument, @Nullable final String data) {
+    private Document generateStructuredDocument(final RedisDocument redisDocument) {
         final String documentID = redisDocument.getDocumentID();
 
-        // if PDF does not found in Redis then generate it first
-        if ( !this.redisDAO.exists(documentID) ) {
-            if (data != null) {
-                this.documentObserver.putDocumentIDToObserve(documentID, data);
-            } else {
-                this.documentObserver.putDocumentIDToObserve(documentID);
-            }
-            waitForDocument(documentID);
-            this.documentObserver.deletePathWith(documentID);
-        }
+        waitForDocument(documentID);
 
-        final byte[] cachedPDF = this.redisDAO.getPDFByID(redisDocument.getDocumentID());
+        final byte[] cachedPDF = this.redisDAO.getDataByID(redisDocument.getDocumentID());
         final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
@@ -193,7 +203,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final CountDownLatch count = new CountDownLatch(TRIALS);
         while (count.getCount() > 0) {
             final Optional<DocumentStatus> status = this.documentObserver.check(documentID);
-            if (status.isPresent() && status.get() == DocumentStatus.GENERATED) {
+            if (status.isPresent() && status.get() == DocumentStatus.GENERATED || status.isEmpty()) {
                 break;
             }
             else {

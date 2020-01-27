@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
+import org.web3j.abi.Utils;
+import org.web3j.crypto.WalletUtils;
 
 import javax.annotation.Nullable;
 import java.io.InputStream;
@@ -27,8 +29,8 @@ import java.time.Duration;
 @Service
 public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
 
-    private static final long TIME_TO_LIVE_HOURS = 24;
-    private static final long TIME_TO_LIVE_EXAMPLES_DAYS = 30;
+    private static final Duration TIME_TO_LIVE = Duration.ofHours(24);
+    private static final Duration TIME_TO_LIVE_EXAMPLES = Duration.ofDays(30);
 
     private final Repeater repeater;
 
@@ -63,19 +65,24 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
                 documentInputStream = templateHandler.generatePDFDocument();
                 this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
                 this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
-                expire = Duration.ofHours(TIME_TO_LIVE_HOURS);
-            } else {
+                expire = TIME_TO_LIVE;
+            } else if(WalletUtils.isValidAddress(documentID)) {
                 final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID, data);
                 templateHandler.generateTemplate();
                 templateHandler.downloadAdditionalFiles();
 
                 documentInputStream = templateHandler.generatePDFDocument();
-                expire = (data == null ? Duration.ofDays(TIME_TO_LIVE_EXAMPLES_DAYS) : Duration.ZERO);
+                expire = (data == null ? TIME_TO_LIVE_EXAMPLES : TIME_TO_LIVE_PREVIEW_CACHE);
+            } else {
+                ByteBuffer templateZip = ByteBuffer.wrap(redisDAO.getDataByID(documentID));
+
+                documentInputStream = generate(templateZip);
+                expire = TIME_TO_LIVE_PREVIEW_CACHE;
             }
             // encrypt PDF before caching to Redis
             final byte[] documentBytes = IOUtils.toByteArray(documentInputStream);
             final byte[] encryptedDocument = ChaCha20Utils.encrypt(documentBytes);
-            this.redisDAO.savePDF(encryptedDocument, documentID, expire);
+            this.redisDAO.saveData(encryptedDocument, documentID, expire);
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF with '{}' ID", documentID, ex);
             this.metricsLogger.incrementCount(MethodID.COUNT_OF_FAILED_DOCUMENT_GENERATIONS);
@@ -86,20 +93,10 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
         }
     }
 
-    /**
-     * @see StructuredPDFGenerator#generate(ByteBuffer)
-     */
-    @Override
-    public byte[] generate(ByteBuffer templateZip) {
-        try {
-            final HTMLTemplateHandlerChainless templateHandlerChainless = new HTMLTemplateHandlerChainless(templateZip);
-            templateHandlerChainless.generateTemplate();
-            final InputStream documentInputStream = templateHandlerChainless.generatePDFDocument();
-            return IOUtils.toByteArray(documentInputStream);
-        } catch (Exception ex) {
-            log.error("[SERVICE] exception while generating preview PDF", ex);
-            return new byte[0];
-        }
+    private InputStream generate(ByteBuffer templateZip) throws Exception {
+        final HTMLTemplateHandlerChainless templateHandlerChainless = new HTMLTemplateHandlerChainless(templateZip);
+        templateHandlerChainless.generateTemplate();
+        return templateHandlerChainless.generatePDFDocument();
     }
 
     private DocumentCertificate getDocumentCertificateByID(final String documentID) {
