@@ -31,6 +31,19 @@ public class RedisDAOImpl implements RedisDAO {
     }
 
     /**
+     * @see RedisDAO#save(String, RedisDocument, Duration)
+     */
+    @Override
+    public void save(final String key, final RedisDocument redisDocument, final Duration expire) {
+        log.info("[REDIS] saving '{}' link under key '{}' ", redisDocument, key);
+        final byte[] array = this.kryoSerializer.serialize(redisDocument);
+        final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
+        rBinaryStream.set(array);
+        rBinaryStream.expire(expire.getSeconds(), TimeUnit.SECONDS);
+        log.info("[REDIS] '{}' object has been saved under '{}' key", redisDocument, key);
+    }
+
+    /**
      * @see RedisDAO#exists(String)
      */
     @Override
@@ -41,26 +54,26 @@ public class RedisDAOImpl implements RedisDAO {
     }
 
     /**
-     * @see RedisDAO#savePDF(byte[], String, Duration)
+     * @see RedisDAO#saveData(byte[], String, Duration)
      */
     @Override
-    public boolean savePDF(final byte[] document, final String key, final Duration expire) {
-        log.info("[REDIS] saving PDF document under key '{}' ", key);
+    public boolean saveData(final byte[] document, final String key, final Duration expire) {
+        log.info("[REDIS] saving data under key '{}' ", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
         rBinaryStream.set(document);
         rBinaryStream.expire(expire.getSeconds(), TimeUnit.SECONDS);
-        log.info("[REDIS] PDF document has been saved under '{}' key", key);
+        log.info("[REDIS] data has been saved under '{}' key", key);
         return true;
     }
 
     /**
-     * @see RedisDAO#getPDFByID(String)
+     * @see RedisDAO#getDataByID(String)
      */
     @Override
-    public byte[] getPDFByID(final String key) {
-        log.info("[REDIS] reading PDF document under '{}' key", key);
+    public byte[] getDataByID(final String key) {
+        log.info("[REDIS] reading data under '{}' key", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
-        log.info("[REDIS] found PDF document under '{}' key", key);
+        log.info("[REDIS] found data under '{}' key", key);
         return rBinaryStream.get();
     }
 }

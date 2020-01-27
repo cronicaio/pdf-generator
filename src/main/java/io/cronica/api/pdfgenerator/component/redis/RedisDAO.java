@@ -14,6 +14,18 @@ public interface RedisDAO {
     RedisDocument get(String key);
 
     /**
+     * Save {@link RedisDocument} object under specified key to Redis.
+     *
+     * @param key
+     *          - key to record
+     * @param redisDocument
+     *          - object which necessary to store
+     * @param expire
+     *          - expiration of document when it will be automatically deleted
+     */
+    void save(String key, RedisDocument redisDocument, Duration expire);
+
+    /**
      * Check whether {@link RedisDocument} with specified key exists.
      *
      * @param key
@@ -30,10 +42,10 @@ public interface RedisDAO {
      * @param key
      *          - key to PDF
      * @param expire
-     *          - expiration of pdf document when it will be automatically deleted
+     *          - expiration of data when it will be automatically deleted
      * @return {@code true} if successfully saved, {@code false} otherwise
      */
-    boolean savePDF(byte[] document, String key, Duration expire);
+    boolean saveData(byte[] document, String key, Duration expire);
 
     /**
      * Read PDF document from Redis identified by document ID.
@@ -42,5 +54,5 @@ public interface RedisDAO {
      *          - key to PDF
      * @return file as array of bytes
      */
-    byte[] getPDFByID(String key);
+    byte[] getDataByID(String key);
 }
