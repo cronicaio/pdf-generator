@@ -46,22 +46,18 @@ public class DocumentObserverImpl implements DocumentObserver {
             final List<String> list = this.curator.getChildren()
                     .forPath(Constants.DOCUMENTS_ROOT)
                     .stream()
+                    .filter(documentID -> {
+                        final byte[] data = readDataByPath(path(documentID)).orElseThrow(() -> new IllegalStateException("Data not found"));
+                        return Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data);
+                    })
                     .peek(documentID -> {
-                        final String path = path(documentID);
-                        final byte[] data = readDataByPath(path).orElseThrow(() -> new IllegalStateException("Data not found"));
-                        if ( Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data) ) {
-                            setStatus(path, DocumentStatus.PENDING);
-                            CompletableFuture.runAsync(() -> {
-                                final String jsonData = readDataByPath(dataPath(documentID))
-                                        .map(String::new)
-                                        .orElse(null);
-                                this.structuredPDFGenerator.generateAndSave(documentID, jsonData);
-                                setStatus(path, DocumentStatus.GENERATED);
-                            }).exceptionally(ex -> {
-                                log.error("[OBSERVER] Error while generating document", ex);
-                                return null;
-                            });
-                        }
+                        setStatus(path(documentID), DocumentStatus.PENDING);
+                        CompletableFuture
+                                .runAsync(() -> this.processDocumentCommand(documentID))
+                                .exceptionally(ex -> {
+                                    log.error("[OBSERVER] Error while generating document", ex);
+                                    return null;
+                                });
                     })
                     .collect(Collectors.toList());
             log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
@@ -69,6 +65,33 @@ public class DocumentObserverImpl implements DocumentObserver {
         catch (Exception ex) {
             log.error("[OBSERVER] exception while observing documents status", ex);
         }
+    }
+
+    @Scheduled(fixedDelay = 30000)
+    public void cleanup() {
+        try {
+            final List<String> list = this.curator.getChildren()
+                    .forPath(Constants.DOCUMENTS_ROOT)
+                    .stream()
+                    .filter(documentID -> {
+                        final byte[] data = readDataByPath(path(documentID)).orElseThrow(() -> new IllegalStateException("Data not found"));
+                        return Arrays.equals(DocumentStatus.GENERATED.getRawStatus(), data);
+                    })
+                    .collect(Collectors.toList());
+            list.forEach(this::deletePathWith);
+            log.debug("[OBSERVER] Cleaned {} paths with GENERATED status", list.size());
+        }
+        catch (Exception ex) {
+            log.error("[OBSERVER] exception while observing documents status", ex);
+        }
+    }
+
+    private void processDocumentCommand(final String documentId) {
+        final String jsonData = readDataByPath(dataPath(documentId))
+                .map(String::new)
+                .orElse(null);
+        this.structuredPDFGenerator.generateAndSave(documentId, jsonData);
+        setStatus(path(documentId), DocumentStatus.GENERATED);
     }
 
     private void setStatus(final String path, final DocumentStatus status) {
