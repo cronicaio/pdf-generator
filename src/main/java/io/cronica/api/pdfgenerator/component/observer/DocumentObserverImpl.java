@@ -67,7 +67,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    @Scheduled(fixedDelay = 30000)
+    @Scheduled(fixedDelay = 1000)
     public void cleanup() {
         try {
             final List<String> list = this.curator.getChildren()
