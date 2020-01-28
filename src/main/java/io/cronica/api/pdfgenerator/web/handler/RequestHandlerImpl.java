@@ -2,6 +2,7 @@ package io.cronica.api.pdfgenerator.web.handler;
 
 import io.cronica.api.pdfgenerator.component.dto.APIErrorResponseDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
+import io.cronica.api.pdfgenerator.component.entity.Issuer;
 import io.cronica.api.pdfgenerator.exception.*;
 import io.cronica.api.pdfgenerator.service.PDFDocumentService;
 import io.cronica.api.pdfgenerator.utils.PDFUtils;
@@ -26,6 +27,7 @@ import java.net.URI;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class RequestHandlerImpl implements RequestHandler {
     private static final String TEMPLATE_FILE = "file";
 
     private final PDFDocumentService pdfDocumentService;
+    private final Issuer issuer;
 
     /**
      * @see RequestHandler#healthCheck(ServerRequest)
@@ -80,7 +83,7 @@ public class RequestHandlerImpl implements RequestHandler {
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(String.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
-                .map(uid -> serverRequest.uriBuilder().scheme(null).replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(this::makeTempLink)
                 .map(this::toLinkMap)
                 .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
@@ -93,7 +96,7 @@ public class RequestHandlerImpl implements RequestHandler {
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
                 .flatMap(m -> DataBufferUtils.join(m.content()))
                 .map(this.pdfDocumentService::generatePreviewTemplate)
-                .map(uid -> serverRequest.uriBuilder().scheme(null).replacePath("/v1/pdf/" + uid.toString()).build())
+                .map(this::makeTempLink)
                 .map(this::toLinkMap)
                 .flatMap(this::generateJSONResponse)
                 .onErrorResume(this::handleError);
@@ -132,6 +135,10 @@ public class RequestHandlerImpl implements RequestHandler {
 
     private Map<String, URI> toLinkMap(final URI uri) {
         return Collections.singletonMap("link", uri);
+    }
+
+    private URI makeTempLink(UUID uid) {
+        return URI.create(this.issuer.getIssuerApiLink() + "/v1/pdf/" + uid);
     }
 
     private Mono<ServerResponse> handleError(final Throwable throwable) {
