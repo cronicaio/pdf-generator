@@ -3,6 +3,7 @@ package io.cronica.api.pdfgenerator.service;
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
 import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
+import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
 import io.cronica.api.pdfgenerator.component.observer.DocumentObserver;
@@ -113,12 +114,13 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     }
 
     /**
-     * @see PDFDocumentService#generatePreviewDocument(String, String)
+     * @see PDFDocumentService#generatePreviewDocument(String, DataJsonDTO)
      */
     @Override
-    public UUID generatePreviewDocument(final String templateAddress, final String jsonData) {
+    public UUID generatePreviewDocument(final String templateAddress, final DataJsonDTO jsonData) {
         final UUID uid = UUID.randomUUID();
-        this.documentObserver.putDocumentIDToObserve(templateAddress, jsonData);
+        final String data = DocumentUtils.convertDataJsonToString(jsonData);
+        this.documentObserver.putDocumentIDToObserve(templateAddress, data);
         this.redisDAO.save(uid.toString(), new RedisDocument(PDF_IN_MEMORY_DOCUMENT_TYPE, templateAddress), Duration.ofMinutes(1));
         return uid;
     }

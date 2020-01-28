@@ -1,6 +1,7 @@
 package io.cronica.api.pdfgenerator.web.handler;
 
 import io.cronica.api.pdfgenerator.component.dto.APIErrorResponseDTO;
+import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
 import io.cronica.api.pdfgenerator.component.entity.Issuer;
 import io.cronica.api.pdfgenerator.exception.*;
@@ -81,7 +82,7 @@ public class RequestHandlerImpl implements RequestHandler {
     public Mono<ServerResponse> generateDocumentPreview(final ServerRequest serverRequest) {
         final String templateId = serverRequest.pathVariable(TEMPLATE_ID_VARIABLE);
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
-        return serverRequest.bodyToMono(String.class)
+        return serverRequest.bodyToMono(DataJsonDTO.class)
                 .map(body -> this.pdfDocumentService.generatePreviewDocument(templateAddress, body))
                 .map(this::makeTempLink)
                 .map(this::toLinkMap)
