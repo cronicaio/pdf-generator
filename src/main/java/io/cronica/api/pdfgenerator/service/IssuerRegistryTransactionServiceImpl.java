@@ -7,6 +7,7 @@ import io.cronica.api.pdfgenerator.exception.QuorumTransactionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Utf8String;
@@ -48,4 +49,10 @@ public class IssuerRegistryTransactionServiceImpl implements IssuerRegistryTrans
             throw new RuntimeException(ex);
         }
     }
+
+    @Bean
+    public Issuer initCurrentIssuer() {
+        return this.getIssuerByBankCode(this.bankCode);
+    }
+
 }

@@ -33,4 +33,30 @@ public interface Constants {
 
     String BASE64IMAGE = "base64image";
 
+    /* ARCHIVE */
+    String PATH_TO_FOLDER_WITH_ZIP_ARCHIVE_CONTENT = "temp/zip/";
+    String ZIP_ARCHIVE_MAGIC_NUMBER = "504B0304";
+    String JPEG_IMAGE_MAGIC_NUMBER = "FFD8";
+    String PNG_IMAGE_MAGIC_NUMBER = "89504E47";
+    String OTF_FONT_MAGIC_NUMBER = "4F54544F00";
+    String TTF_FONT_MAGIC_NUMBER_1 = "7472756500";
+    String TTF_FONT_MAGIC_NUMBER_2 = "1000000";
+
+    String TEMPLATE_FILE_PREFIX = "body";
+
+    String DEFAULT_FONT_EXTENSION = ".ttf";
+    String JASPERSOFT_FILE_EXTENSION = "jrxml";
+    String HTML_FILE_EXTENSION = "html";
+    String JPEG_FILE_EXTENSION = "jpg";
+    String FONT_FILE_EXTENSION = "ttf";
+
+    /* TEMPLATE */
+    String BASE64_CONTENT_CLOSE_2 = "');";
+    String FONT_TYPE_OPEN_2 = "src: url('data:";
+    String SRC_BEGIN = "data:";
+    String JPEG_FILE_TYPE = "image/jpeg";
+    String PNG_FILE_TYPE = "image/png";
+    String JPEG_FILE_EXTENSION_WITH_DOT = ".jpg";
+    String PNG_FILE_EXTENSION_WITH_DOT = ".png";
+
 }

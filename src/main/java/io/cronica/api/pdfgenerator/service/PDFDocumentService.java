@@ -1,6 +1,10 @@
 package io.cronica.api.pdfgenerator.service;
 
+import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
+import org.springframework.core.io.buffer.DataBuffer;
+
+import java.util.UUID;
 
 public interface PDFDocumentService {
 
@@ -29,7 +33,16 @@ public interface PDFDocumentService {
      *          - template contract address
      * @param jsonData
      *          - custom json data that represents a document
-     * @return {@link Document} object
+     * @return {@link UUID} for downloading document
      */
-    Document generatePreviewDocument(String templateAddress, String jsonData);
+    UUID generatePreviewDocument(String templateAddress, DataJsonDTO jsonData);
+
+    /**
+     * Make request for generation preview PDF document by template zip file
+     *
+     * @param dataBuffer
+     *          - data buffer with template zip content
+     * @return {@link UUID} for downloading document
+     */
+    UUID generatePreviewTemplate(DataBuffer dataBuffer);
 }

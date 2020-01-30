@@ -7,6 +7,7 @@ import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -123,6 +124,34 @@ public class DocumentUtils {
     public static String convertMapToJsonString(final Map<String, Object> map) throws IOException {
         final ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(map);
+    }
+
+    /**
+     * Copying data from DataJsonDto object to map with structure which understands
+     * Jaspersoft library used by this API.
+     *
+     * @param dataJson
+     *          - object that contains data that need to restructure
+     * @return mapping with a structure that is understandable for the Jaspersoft library
+     */
+    public static String convertDataJsonToString(DataJsonDTO dataJson) {
+        final Map<String, Object> map = new HashMap<>();
+        if (dataJson.getFields() != null) {
+            map.putAll(dataJson.getFields());
+        }
+
+        if (dataJson.getTables() != null) {
+            for (String key : dataJson.getTables().keySet()) {
+                map.put(key, dataJson.getTables().get(key));
+            }
+        }
+
+        try {
+            return convertMapToJsonString(map);
+        } catch (IOException e) {
+            log.error("[UTILITY] unable to convert json object to string", e);
+            return "{}";
+        }
     }
 
 }
