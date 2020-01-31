@@ -308,8 +308,8 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
     private byte[] generateQrCodeImageFrom(final String linkToPdfDocument) throws IOException {
         BufferedImage originalImage = DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
-                100,
-                100);
+                QR_CODE_IMAGE_WIDTH,
+                QR_CODE_IMAGE_HEIGHT);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(originalImage, "png", baos);
         baos.flush();
