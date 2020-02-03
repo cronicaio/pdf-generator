@@ -122,7 +122,7 @@ public class DocumentObserverImpl implements DocumentObserver {
             this.curator.create().forPath(path, DocumentStatus.REGISTERED.getRawStatus());
         }
         catch (Exception ex) {
-            log.error("[OBSERVER] exception while registering document by '{}' path", path);
+            log.error("[OBSERVER] exception while registering document by '{}' path", path, ex);
         }
     }
 
@@ -138,7 +138,7 @@ public class DocumentObserverImpl implements DocumentObserver {
             this.curator.create().forPath(dataPath, data.getBytes());
         }
         catch (Exception ex) {
-            log.error("[OBSERVER] exception while registering document by '{}' path", dataPath);
+            log.error("[OBSERVER] exception while registering document by '{}' path", dataPath, ex);
         }
     }
 
