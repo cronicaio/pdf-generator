@@ -56,6 +56,7 @@ public class DocumentObserverImpl implements DocumentObserver {
                                 .runAsync(() -> this.processDocumentCommand(documentID))
                                 .exceptionally(ex -> {
                                     log.error("[OBSERVER] Error while generating document", ex);
+                                    this.setStatus(path(documentID), DocumentStatus.GENERATED);
                                     return null;
                                 });
                     })
