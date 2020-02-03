@@ -192,9 +192,11 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private Document generateStructuredDocument(final RedisDocument redisDocument) {
         final String documentID = redisDocument.getDocumentID();
-
         waitForDocument(documentID);
+        return loadStructuredDocumentFromCache(redisDocument);
+    }
 
+    private Document loadStructuredDocumentFromCache(final RedisDocument redisDocument) {
         final byte[] cachedPDF = this.redisDAO.getDataByID(redisDocument.getDocumentID());
         final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
@@ -208,7 +210,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final CountDownLatch count = new CountDownLatch(TRIALS);
         while (count.getCount() > 0) {
             final Optional<DocumentStatus> status = this.documentObserver.check(documentID);
-            if (status.isPresent() && status.get() == DocumentStatus.GENERATED || status.isEmpty()) {
+            if (status.isEmpty() || status.get() == DocumentStatus.GENERATED || this.redisDAO.exists(documentID)) {
                 break;
             }
             else {
