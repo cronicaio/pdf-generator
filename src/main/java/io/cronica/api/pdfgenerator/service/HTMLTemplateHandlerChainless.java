@@ -140,8 +140,8 @@ public final class HTMLTemplateHandlerChainless implements TemplateHandler {
                         + "QR-" + this.tempUid.toString() + PNG_FILE_EXTENSION);
         DocumentUtils.generateQRCodeImage(
                 TEMPLATE_PREVIEW,
-                100,
-                100,
+                QR_CODE_IMAGE_WIDTH,
+                QR_CODE_IMAGE_HEIGHT,
                 qrCodeImage.getAbsolutePath());
         return qrCodeImage;
     }

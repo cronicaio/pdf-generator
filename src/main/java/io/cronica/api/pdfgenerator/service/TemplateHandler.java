@@ -5,6 +5,9 @@ import java.io.InputStream;
 
 public interface TemplateHandler {
 
+    int QR_CODE_IMAGE_WIDTH = 200;
+    int QR_CODE_IMAGE_HEIGHT = 200;
+
     /**
      * Generate template file which will be used for generating PDF document.
      *

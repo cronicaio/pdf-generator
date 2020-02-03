@@ -283,8 +283,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
                  + "QR-" + this.documentID + PNG_FILE_EXTENSION);
         DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
-                100,
-                100,
+                QR_CODE_IMAGE_WIDTH,
+                QR_CODE_IMAGE_HEIGHT,
                 qrCodeImage.getAbsolutePath());
         return qrCodeImage;
     }

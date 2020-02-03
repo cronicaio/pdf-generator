@@ -178,7 +178,7 @@ public class JasperSoftTemplateHandler implements TemplateHandler {
                 PATH_TO_FOLDER_WITH_QR_CODE
                 + "QR-" + this.documentID + PNG_FILE_EXTENSION
         );
-        DocumentUtils.generateQRCodeImage(linkToPdfDocument, 100, 100, qrCodeImage.getAbsolutePath());
+        DocumentUtils.generateQRCodeImage(linkToPdfDocument, QR_CODE_IMAGE_WIDTH, QR_CODE_IMAGE_HEIGHT, qrCodeImage.getAbsolutePath());
         return qrCodeImage;
     }
 
