@@ -2,6 +2,7 @@ package io.cronica.api.pdfgenerator.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 
 public interface TemplateHandler {
 
@@ -23,10 +24,10 @@ public interface TemplateHandler {
     /**
      * Generate PDF document from template.
      *
-     * @return PDF document file as {@link InputStream} object
+     * @return PDF document file as byte array object
      *
      * @throws IOException - if exception happens while working with files
      * @throws InterruptedException - if exception happens while generating PDF document
      */
-    InputStream generatePDFDocument() throws Exception;
+    byte[] generatePDFDocument() throws Exception;
 }

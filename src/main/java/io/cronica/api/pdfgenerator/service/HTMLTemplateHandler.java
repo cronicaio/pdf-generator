@@ -12,6 +12,7 @@ import io.cronica.api.pdfgenerator.utils.HTMLUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.context.annotation.Scope;
 
@@ -185,7 +186,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
      * @see TemplateHandler#generatePDFDocument()
      */
     @Override
-    public InputStream generatePDFDocument() throws Exception {
+    public byte[] generatePDFDocument() throws Exception {
         final String uuid = UUID.randomUUID().toString();
         final String fileName = "DC-" + uuid + ".pdf";
         final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
@@ -211,7 +212,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
             }
 
             log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
-            return new FileInputStream(document);
+            return IOUtils.toByteArray(new FileInputStream(document));
         }
         finally {
             deleteFile(document);

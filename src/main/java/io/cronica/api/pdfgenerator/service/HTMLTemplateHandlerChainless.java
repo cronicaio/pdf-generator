@@ -6,6 +6,7 @@ import io.cronica.api.pdfgenerator.utils.FileUtility;
 import io.cronica.api.pdfgenerator.utils.HTMLUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -62,7 +63,7 @@ public final class HTMLTemplateHandlerChainless implements TemplateHandler {
      * @see TemplateHandler#generatePDFDocument()
      */
     @Override
-    public InputStream generatePDFDocument() throws Exception {
+    public byte[] generatePDFDocument() throws Exception {
         final String fileName = "DC-" + this.tempUid.toString() + ".pdf";
         final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
 
@@ -86,7 +87,7 @@ public final class HTMLTemplateHandlerChainless implements TemplateHandler {
             }
 
             log.info("[SERVICE] successfully generated PDF preview template document");
-            return new FileInputStream(document);
+            return IOUtils.toByteArray(new FileInputStream(document));
         }
         finally {
             deleteFile(document);
