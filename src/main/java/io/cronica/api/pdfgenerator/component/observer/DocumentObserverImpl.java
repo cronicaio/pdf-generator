@@ -60,7 +60,9 @@ public class DocumentObserverImpl implements DocumentObserver {
                                 });
                     })
                     .collect(Collectors.toList());
-            log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
+            if (!list.isEmpty()) {
+                log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
+            }
         }
         catch (Exception ex) {
             log.error("[OBSERVER] exception while observing documents status", ex);
@@ -79,7 +81,9 @@ public class DocumentObserverImpl implements DocumentObserver {
                     })
                     .collect(Collectors.toList());
             list.forEach(this::deletePathWith);
-            log.debug("[OBSERVER] Cleaned {} paths with GENERATED status", list.size());
+            if (!list.isEmpty()) {
+                log.debug("[OBSERVER] Cleaned {} paths with GENERATED status", list.size());
+            }
         }
         catch (Exception ex) {
             log.error("[OBSERVER] exception while observing documents status", ex);
