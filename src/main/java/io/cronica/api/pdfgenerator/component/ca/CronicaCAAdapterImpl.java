@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StopWatch;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -78,7 +79,7 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
                 log.debug("[ADAPTER] empty body in response");
                 this.metricsLogger.incrementCount(MethodID.SIGN_DOCUMENT_FAILED_REQUESTS);
             }
-        } catch (HttpServerErrorException ex) {
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
             log.error("[ADAPTER] exception on Cronica CA", ex);
             this.metricsLogger.incrementCount(MethodID.SIGN_DOCUMENT_FAILED_REQUESTS);
         } finally {
