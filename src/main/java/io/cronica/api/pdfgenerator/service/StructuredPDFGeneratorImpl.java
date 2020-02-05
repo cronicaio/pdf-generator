@@ -50,6 +50,8 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
      */
     public void generateAndSave(final String documentID, @Nullable final String data) {
         final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
         try {
             byte[] documentData;
             final Duration expire;
@@ -60,6 +62,8 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
                 templateHandler.downloadAdditionalFiles();
 
                 documentData = templateHandler.generatePDFDocument();
+                stopWatch.stop();
+
                 this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
                 this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
                 expire = TIME_TO_LIVE;
