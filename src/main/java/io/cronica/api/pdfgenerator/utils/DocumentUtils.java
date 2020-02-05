@@ -164,7 +164,7 @@ public class DocumentUtils {
         try {
             Resource resource = new ClassPathResource("static/logo.png");
             final BufferedImage logoImage = ImageIO.read(resource.getInputStream());
-            final Image logoImageScaledInstance = logoImage.getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+            final Image logoImageScaledInstance = logoImage.getScaledInstance(35, 35, Image.SCALE_SMOOTH);
             final BufferedImage scaledLogo = toBufferedImage(logoImageScaledInstance);
 
             float deltaHeight = (float) (qrImage.getHeight() - scaledLogo.getHeight());
