@@ -17,12 +17,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Component
 public class DocumentObserverImpl implements DocumentObserver {
+
+    private final Semaphore semaphore = new Semaphore(10, false);
 
     private final CuratorFramework curator;
 
@@ -92,11 +96,21 @@ public class DocumentObserverImpl implements DocumentObserver {
     }
 
     private void processDocumentCommand(final String documentId) {
-        final String jsonData = readDataByPath(dataPath(documentId))
-                .map(String::new)
-                .orElse(null);
-        this.structuredPDFGenerator.generateAndSave(documentId, jsonData);
-        setStatus(path(documentId), DocumentStatus.GENERATED);
+        try {
+            if ( !this.semaphore.tryAcquire(5, TimeUnit.SECONDS) ) {
+                log.warn("[OBSERVER] queue of pdf generation is full");
+                return;
+            }
+            final String jsonData = readDataByPath(dataPath(documentId))
+                    .map(String::new)
+                    .orElse(null);
+            this.structuredPDFGenerator.generateAndSave(documentId, jsonData);
+            setStatus(path(documentId), DocumentStatus.GENERATED);
+            this.semaphore.release();
+        } catch (Exception e) {
+            log.error("[OBSERVER] failed acquire lock", e);
+            this.semaphore.release();
+        }
     }
 
     private void setStatus(final String path, final DocumentStatus status) {
