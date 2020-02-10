@@ -1,18 +1,17 @@
 package io.cronica.api.pdfgenerator.service;
 
-import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
-import io.cronica.api.pdfgenerator.component.aws.Repeater;
+import com.amazonaws.util.Md5Utils;
+import com.google.common.base.Preconditions;
 import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
 import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
-import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
+import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
 import io.cronica.api.pdfgenerator.component.observer.DocumentObserver;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
 import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
-import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import io.cronica.api.pdfgenerator.utils.ChaCha20Utils;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import io.cronica.api.pdfgenerator.utils.FileUtility;
@@ -23,12 +22,13 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 import org.web3j.crypto.Hash;
+import org.web3j.utils.Numeric;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -39,23 +39,14 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
-    private static final String PDF_DOCUMENT_TYPE = "pdf";
-    private static final String PDF_IN_MEMORY_DOCUMENT_TYPE = "pdf_in_memory";
-    private static final String PDF_EMPTY_DOCUMENT_TYPE = "pdf_empty";
     private static final int TIME_TO_SLEEP_MILLIS = 500;
     private static final int TRIALS = 120;
-
-    private final Repeater repeater;
 
     private final RedisDAO redisDAO;
 
     private final CronicaCAAdapter cronicaCAAdapter;
 
     private final DocumentObserver documentObserver;
-
-    private final AWSS3BucketAdapter awss3BucketAdapter;
-
-    private final DocumentTransactionService documentTransactionService;
 
     private final DocumentCertificateRepository documentCertificateRepository;
 
@@ -64,37 +55,32 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
      */
     @Override
     public Document generatePDFDocument(final String uuid) {
-        validateUUID(uuid);
+        Preconditions.checkArgument(isValidUUID(uuid), "Invalid UUID string");
         validateDocumentInRedis(uuid);
 
-        final RedisDocument redisDocument = this.redisDAO.get(uuid);
-        switch (redisDocument.getType()) {
-            case PDF_DOCUMENT_TYPE:
-                if ( !this.redisDAO.exists(redisDocument.getDocumentID()) ) {
-                    this.documentObserver.putDocumentIDToObserve(redisDocument.getDocumentID());
-                }
-                final DocumentCertificate docCert = getDocumentCertificateByID(redisDocument.getDocumentID());
-                if ( !docCert.getIsStructured() ) {
-                    return downloadNonStructuredDocument(redisDocument);
-                } else {
-                    try {
-                        return generateStructuredDocument(redisDocument);
-                    } catch (Exception ex) {
-                        log.error("[SERVICE] exception while generating PDF of structured document", ex);
-                        return new Document();
-                    }
-                }
-            case PDF_EMPTY_DOCUMENT_TYPE:
-            case PDF_IN_MEMORY_DOCUMENT_TYPE:
-                try {
-                    return generateStructuredDocument(redisDocument);
-                } catch (Exception ex) {
-                    log.error("[SERVICE] exception while generating PDF of structured document", ex);
-                    return new Document();
-                }
+        final Optional<RedisDocument> redisDocument = this.redisDAO.get(uuid);
+        final UUID uid = redisDocument.map(document -> {
+            final DocumentCertificate docCert = getDocumentCertificateByID(document.getDocumentID());
+            final GeneratePdfRequest.StorageType type;
+            if (docCert.getIsStructured()) type = GeneratePdfRequest.StorageType.BLOCKCHAIN;
+            else type = GeneratePdfRequest.StorageType.S3;
+            final UUID resultId = this.createResultId(document.getDocumentID());
+            if ( !this.redisDAO.exists(resultId.toString()) ) {
+                final GeneratePdfRequest request = GeneratePdfRequest.builder()
+                        .resultId(resultId)
+                        .template(new GeneratePdfRequest.Content(null, GeneratePdfRequest.StorageType.NOT_SET))
+                        .document(new GeneratePdfRequest.Content(document.getDocumentID(), type))
+                        .build();
+                this.documentObserver.sendGeneratePdfRequest(request);
+            }
+            return resultId;
+        }).orElse(UUID.fromString(uuid));
+        try {
+            return generateDownloadableDocument(uid, redisDocument.isPresent());
+        } catch (Exception ex) {
+            log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
+            throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
         }
-        log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
-        throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
     }
 
     /**
@@ -103,10 +89,16 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     @Override
     public Document generateExampleDocument(final String templateAddress) {
         try {
-            if ( !this.redisDAO.exists(templateAddress) ) {
-                this.documentObserver.putDocumentIDToObserve(templateAddress);
+            final UUID uid = this.createResultId(templateAddress);
+            if ( !this.redisDAO.exists(uid.toString()) ) {
+                final GeneratePdfRequest request = GeneratePdfRequest.builder()
+                        .resultId(uid)
+                        .template(new GeneratePdfRequest.Content(templateAddress, GeneratePdfRequest.StorageType.BLOCKCHAIN))
+                        .document(new GeneratePdfRequest.Content(null, GeneratePdfRequest.StorageType.NOT_SET))
+                        .build();
+                this.documentObserver.sendGeneratePdfRequest(request);
             }
-            return generateStructuredDocument(new RedisDocument(PDF_DOCUMENT_TYPE, templateAddress));
+            return generateDownloadableDocument(uid, false);
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
             return new Document();
@@ -119,9 +111,15 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     @Override
     public UUID generatePreviewDocument(final String templateAddress, final DataJsonDTO jsonData) {
         final UUID uid = UUID.randomUUID();
+        final String dataId = Hash.sha3(uid.toString());
         final String data = DocumentUtils.convertDataJsonToString(jsonData);
-        this.documentObserver.putDocumentIDToObserve(templateAddress, data);
-        this.redisDAO.save(uid.toString(), new RedisDocument(PDF_IN_MEMORY_DOCUMENT_TYPE, templateAddress), Duration.ofMinutes(1));
+        final GeneratePdfRequest request = GeneratePdfRequest.builder()
+                .resultId(uid)
+                .template(new GeneratePdfRequest.Content(templateAddress, GeneratePdfRequest.StorageType.BLOCKCHAIN))
+                .document(new GeneratePdfRequest.Content(dataId, GeneratePdfRequest.StorageType.CACHE))
+                .build();
+        this.documentObserver.sendGeneratePdfRequest(request);
+        this.redisDAO.saveData(data.getBytes(StandardCharsets.UTF_8), dataId, PDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
         return uid;
     }
 
@@ -134,17 +132,26 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final String dataId = Hash.sha3(uid.toString());
         FileUtility.validateZipArchive(dataBuffer);
         final ByteBuffer byteBuffer = dataBuffer.readPosition(0).asByteBuffer();
-        this.redisDAO.save(uid.toString(), new RedisDocument(PDF_EMPTY_DOCUMENT_TYPE, dataId), StructuredPDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
-        this.redisDAO.saveData(byteBuffer.array(), dataId, StructuredPDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
-        this.documentObserver.putDocumentIDToObserve(dataId);
+        final GeneratePdfRequest request = GeneratePdfRequest.builder()
+                .resultId(uid)
+                .template(new GeneratePdfRequest.Content(dataId, GeneratePdfRequest.StorageType.CACHE))
+                .document(new GeneratePdfRequest.Content(null, GeneratePdfRequest.StorageType.NOT_SET))
+                .build();
+        this.redisDAO.saveData(byteBuffer.array(), dataId, PDFGenerator.TIME_TO_LIVE_PREVIEW_CACHE);
+        this.documentObserver.sendGeneratePdfRequest(request);
         return uid;
     }
 
-    private void validateUUID(final String uuid) {
+    private boolean isValidUUID(final String uuid) {
         if (StringUtils.isEmpty(uuid)) {
-            log.info("[SERVICE] UUID is empty");
-            throw new InvalidRequestException("UUID could not be null");
+            return false;
         }
+        try {
+            UUID.fromString(uuid);
+        } catch (Throwable e) {
+            return false;
+        }
+        return true;
     }
 
     private void validateDocumentInRedis(final String uuid) {
@@ -165,52 +172,27 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return dc;
     }
 
-    private Document downloadNonStructuredDocument(final RedisDocument redisDocument) {
-        final String documentAddress = DocumentUtils.readDocumentAddress(redisDocument.getDocumentID());
-        final String deployedHash = this.documentTransactionService.getHash(documentAddress);
-
-        final byte[] buffer = downloadPDFDocumentFromS3(redisDocument.getDocumentID());
-        final String calculatedHash = DocumentUtils.getSha256(buffer);
-
-        if ( !deployedHash.equals(calculatedHash) ) {
-            log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
-            throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
-        }
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(buffer);
-        final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-
-        return Document.newInstance(fileName, signedDocument);
+    private Document generateDownloadableDocument(final UUID resultId, boolean makeSign) {
+        waitForDocument(resultId);
+        return loadStructuredDocumentFromCache(resultId, makeSign);
     }
 
-    private byte[] downloadPDFDocumentFromS3(final String documentId) {
-        final String fileKey = "docs/DC-" + documentId + ".pdf";
-        if ( !this.repeater.apply(this.awss3BucketAdapter::fileExists, fileKey) ) {
-            throw new DocumentNotFoundException("Document with given " + documentId + " ID is not found");
-        }
-        return this.repeater.apply(this.awss3BucketAdapter::downloadFile, fileKey);
-    }
-
-    private Document generateStructuredDocument(final RedisDocument redisDocument) {
-        final String documentID = redisDocument.getDocumentID();
-        waitForDocument(documentID);
-        return loadStructuredDocumentFromCache(redisDocument);
-    }
-
-    private Document loadStructuredDocumentFromCache(final RedisDocument redisDocument) {
-        final byte[] cachedPDF = this.redisDAO.getDataByID(redisDocument.getDocumentID());
+    private Document loadStructuredDocumentFromCache(final UUID resultId, boolean makeSign) {
+        final String uid = resultId.toString();
+        final byte[] cachedPDF = this.redisDAO.getDataByID(uid);
         final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
-        final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentBytes);
+        final String fileName = "DC-" + uid + ".pdf";
+        final byte[] signedDocument = makeSign ? this.cronicaCAAdapter.signDocument(documentBytes) : documentBytes;
 
         return Document.newInstance(fileName, signedDocument);
     }
 
-    private void waitForDocument(final String documentID) {
+    private void waitForDocument(final UUID resultId) {
         final CountDownLatch count = new CountDownLatch(TRIALS);
+        final String uid = resultId.toString();
         while (count.getCount() > 0) {
-            final Optional<DocumentStatus> status = this.documentObserver.check(documentID);
-            if (status.isEmpty() || status.get() == DocumentStatus.GENERATED || this.redisDAO.exists(documentID)) {
+            if (this.redisDAO.exists(uid)) {
                 break;
             }
             else {
@@ -223,6 +205,19 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
                 }
             }
         }
+    }
+
+    /**
+     * Create determine result id by document-id or smart-contract address
+     *
+     * @param hexString
+     *          - Document Id or Smart-Contract address as HEX string
+     * @return new UUID instance as result id
+     */
+    private UUID createResultId(final String hexString) {
+        Preconditions.checkArgument(DocumentUtils.isHexadecimal(hexString), "Given string is not hexadecimal value");
+        final byte[] data = Numeric.hexStringToByteArray(hexString);
+        return UUID.nameUUIDFromBytes(Md5Utils.computeMD5Hash(data));
     }
 
     /**

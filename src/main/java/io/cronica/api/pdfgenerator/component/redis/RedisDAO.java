@@ -1,6 +1,7 @@
 package io.cronica.api.pdfgenerator.component.redis;
 
 import java.time.Duration;
+import java.util.Optional;
 
 public interface RedisDAO {
 
@@ -11,7 +12,7 @@ public interface RedisDAO {
      *          - key to record
      * @return {@link RedisDocument} object saved under specified key
      */
-    RedisDocument get(String key);
+    Optional<RedisDocument> get(String key);
 
     /**
      * Save {@link RedisDocument} object under specified key to Redis.
