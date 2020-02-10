@@ -33,9 +33,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-vault-config:2.1.1.RELEASE'
-    implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    implementation 'org.springframework.cloud:spring-cloud-starter-stream-kafka'
     implementation ('org.redisson:redisson-spring-boot-starter:3.10.6') {
         exclude module: 'spring-boot-starter-tomcat'
     }
