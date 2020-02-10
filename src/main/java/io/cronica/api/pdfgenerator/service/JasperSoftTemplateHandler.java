@@ -15,6 +15,7 @@ import net.sf.jasperreports.engine.xml.JRXmlLoader;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.util.Collection;
@@ -111,7 +112,7 @@ public class JasperSoftTemplateHandler implements TemplateHandler {
      * @see TemplateHandler#generatePDFDocument()
      */
     @Override
-    public InputStream generatePDFDocument() throws Exception {
+    public byte[] generatePDFDocument() throws Exception {
         final String fileName = "DC-" + this.documentID + ".pdf";
         final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
         try {
@@ -122,7 +123,7 @@ public class JasperSoftTemplateHandler implements TemplateHandler {
             pdfReportStream.writeTo(outPdf);
             pdfReportStream.close();
             log.info("[SERVICE] PDF document with '{}' ID has generated using JasperSoft template", this.documentID);
-            return new FileInputStream(document);
+            return IOUtils.toByteArray(new FileInputStream(document));
         }
         finally {
             FileUtils.forceDelete(document);
@@ -178,7 +179,7 @@ public class JasperSoftTemplateHandler implements TemplateHandler {
                 PATH_TO_FOLDER_WITH_QR_CODE
                 + "QR-" + this.documentID + PNG_FILE_EXTENSION
         );
-        DocumentUtils.generateQRCodeImage(linkToPdfDocument, 100, 100, qrCodeImage.getAbsolutePath());
+        DocumentUtils.generateQRCodeImage(linkToPdfDocument, QR_CODE_IMAGE_WIDTH, QR_CODE_IMAGE_HEIGHT, qrCodeImage.getAbsolutePath());
         return qrCodeImage;
     }
 

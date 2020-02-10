@@ -17,12 +17,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Component
 public class DocumentObserverImpl implements DocumentObserver {
+
+    private final Semaphore semaphore = new Semaphore(10, false);
 
     private final CuratorFramework curator;
 
@@ -46,25 +50,66 @@ public class DocumentObserverImpl implements DocumentObserver {
             final List<String> list = this.curator.getChildren()
                     .forPath(Constants.DOCUMENTS_ROOT)
                     .stream()
+                    .filter(documentID -> {
+                        final byte[] data = readDataByPath(path(documentID)).orElseThrow(() -> new IllegalStateException("Data not found"));
+                        return Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data);
+                    })
                     .peek(documentID -> {
-                        final String path = path(documentID);
-                        final byte[] data = readDataByPath(path);
-                        if ( Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data) ) {
-                            setStatus(path, DocumentStatus.PENDING);
-                            CompletableFuture.runAsync(() -> {
-                                this.structuredPDFGenerator.generateAndSave(documentID);
-                                setStatus(path, DocumentStatus.GENERATED);
-                            }).exceptionally(ex -> {
-                                log.error("[OBSERVER] Error while generating document", ex);
-                                return null;
-                            });
-                        }
+                        setStatus(path(documentID), DocumentStatus.PENDING);
+                        CompletableFuture
+                                .runAsync(() -> this.processDocumentCommand(documentID))
+                                .exceptionally(ex -> {
+                                    log.error("[OBSERVER] Error while generating document", ex);
+                                    this.setStatus(path(documentID), DocumentStatus.GENERATED);
+                                    return null;
+                                });
                     })
                     .collect(Collectors.toList());
-            log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
+            if (!list.isEmpty()) {
+                log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
+            }
         }
         catch (Exception ex) {
             log.error("[OBSERVER] exception while observing documents status", ex);
+        }
+    }
+
+    @Scheduled(fixedDelay = 1000)
+    public void cleanup() {
+        try {
+            final List<String> list = this.curator.getChildren()
+                    .forPath(Constants.DOCUMENTS_ROOT)
+                    .stream()
+                    .filter(documentID -> {
+                        final byte[] data = readDataByPath(path(documentID)).orElseThrow(() -> new IllegalStateException("Data not found"));
+                        return Arrays.equals(DocumentStatus.GENERATED.getRawStatus(), data);
+                    })
+                    .collect(Collectors.toList());
+            list.forEach(this::deletePathWith);
+            if (!list.isEmpty()) {
+                log.debug("[OBSERVER] Cleaned {} paths with GENERATED status", list.size());
+            }
+        }
+        catch (Exception ex) {
+            log.error("[OBSERVER] exception while observing documents status", ex);
+        }
+    }
+
+    private void processDocumentCommand(final String documentId) {
+        try {
+            if ( !this.semaphore.tryAcquire(5, TimeUnit.SECONDS) ) {
+                log.warn("[OBSERVER] queue of pdf generation is full");
+                return;
+            }
+            final String jsonData = readDataByPath(dataPath(documentId))
+                    .map(String::new)
+                    .orElse(null);
+            this.structuredPDFGenerator.generateAndSave(documentId, jsonData);
+            setStatus(path(documentId), DocumentStatus.GENERATED);
+            this.semaphore.release();
+        } catch (Exception e) {
+            log.error("[OBSERVER] failed acquire lock", e);
+            this.semaphore.release();
         }
     }
 
@@ -92,7 +137,23 @@ public class DocumentObserverImpl implements DocumentObserver {
             this.curator.create().forPath(path, DocumentStatus.REGISTERED.getRawStatus());
         }
         catch (Exception ex) {
-            log.error("[OBSERVER] exception while registering document by '{}' path", path);
+            log.error("[OBSERVER] exception while registering document by '{}' path", path, ex);
+        }
+    }
+
+    /**
+     * @see DocumentObserver#putDocumentIDToObserve(String, String)
+     */
+    @Override
+    public void putDocumentIDToObserve(final String documentID, final String data) {
+        this.putDocumentIDToObserve(documentID);
+        final String dataPath = dataPath(documentID);
+        log.debug("[OBSERVER] put data into '{}' path", dataPath);
+        try {
+            this.curator.create().forPath(dataPath, data.getBytes());
+        }
+        catch (Exception ex) {
+            log.error("[OBSERVER] exception while registering document by '{}' path", dataPath, ex);
         }
     }
 
@@ -106,10 +167,10 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    private byte[] readDataByPath(final String path) {
+    private Optional<byte[]> readDataByPath(final String path) {
         log.debug("[OBSERVER] reading data by '{}' path", path);
         try {
-            return this.curator.getData().forPath(path);
+            return Optional.of(this.curator.getData().forPath(path));
         }
         catch (KeeperException.NoNodeException ex) {
             log.debug("[OBSERVER] ZNode by '{}' path does not exists", path);
@@ -117,7 +178,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         catch (Exception ex) {
             log.error("[OBSERVER] exception while reading data by '{}' path", path, ex);
         }
-        return null;
+        return Optional.empty();
     }
 
     /**
@@ -128,7 +189,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         final String path = path(documentID);
         try {
             if ( exists(path) ) {
-                final byte[] data = readDataByPath(path);
+                final byte[] data = readDataByPath(path).orElseThrow();
                 if ( Arrays.equals(data, DocumentStatus.GENERATED.getRawStatus()) ) {
                     return Optional.of(DocumentStatus.GENERATED);
                 }
@@ -154,7 +215,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         final String path = path(documentID);
         log.debug("[OBSERVER] deleting path '{}'", path);
         try {
-            this.curator.delete().forPath(path);
+            this.curator.delete().deletingChildrenIfNeeded().forPath(path);
         }
         catch (KeeperException.NoNodeException ex) {
             log.debug("[OBSERVER] ZNode under '{}' path does not exists", path);
@@ -166,5 +227,9 @@ public class DocumentObserverImpl implements DocumentObserver {
 
     private String path(final String documentID) {
         return Constants.DOCUMENTS_ROOT + Constants.SEPARATOR + documentID;
+    }
+
+    private String dataPath(final String documentID) {
+        return path(documentID) + Constants.SEPARATOR + "data";
     }
 }
