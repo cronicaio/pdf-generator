@@ -1,13 +1,22 @@
 package io.cronica.api.pdfgenerator.component.observer;
 
 import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
-import io.cronica.api.pdfgenerator.service.StructuredPDFGenerator;
+import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
+import io.cronica.api.pdfgenerator.component.kafka.stream.GeneratePdfStream;
+import io.cronica.api.pdfgenerator.service.PDFGenerator;
 import io.cronica.api.pdfgenerator.utils.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.stream.annotation.EnableBinding;
+import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,21 +25,30 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
-@RequiredArgsConstructor
 @Component
+@EnableBinding({GeneratePdfStream.class})
 public class DocumentObserverImpl implements DocumentObserver {
-
-    private final Semaphore semaphore = new Semaphore(10, false);
 
     private final CuratorFramework curator;
 
-    private final StructuredPDFGenerator structuredPDFGenerator;
+    private final PDFGenerator structuredPdfGenerator;
+    private final PDFGenerator nonStructuredPdfGenerator;
+    private final GeneratePdfStream stream;
+
+    public DocumentObserverImpl(
+            final CuratorFramework curator,
+            @Qualifier("structuredPDFGenerator") final PDFGenerator structuredPdfGenerator,
+            @Qualifier("nonStructuredPDFGenerator") final PDFGenerator nonStructuredPdfGenerator,
+            final GeneratePdfStream stream
+    ) {
+        this.curator = curator;
+        this.structuredPdfGenerator = structuredPdfGenerator;
+        this.nonStructuredPdfGenerator = nonStructuredPdfGenerator;
+        this.stream = stream;
+    }
 
     @PostConstruct
     public void init() throws Exception {
@@ -44,34 +62,24 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    @Scheduled(fixedDelay = 500)
-    public void observe() {
-        try {
-            final List<String> list = this.curator.getChildren()
-                    .forPath(Constants.DOCUMENTS_ROOT)
-                    .stream()
-                    .filter(documentID -> {
-                        final byte[] data = readDataByPath(path(documentID)).orElseThrow(() -> new IllegalStateException("Data not found"));
-                        return Arrays.equals(DocumentStatus.REGISTERED.getRawStatus(), data);
-                    })
-                    .peek(documentID -> {
-                        setStatus(path(documentID), DocumentStatus.PENDING);
-                        CompletableFuture
-                                .runAsync(() -> this.processDocumentCommand(documentID))
-                                .exceptionally(ex -> {
-                                    log.error("[OBSERVER] Error while generating document", ex);
-                                    this.setStatus(path(documentID), DocumentStatus.GENERATED);
-                                    return null;
-                                });
-                    })
-                    .collect(Collectors.toList());
-            if (!list.isEmpty()) {
-                log.debug("[OBSERVER] {} sub paths found. Result: {}", list.size(), list);
-            }
+    @StreamListener(GeneratePdfStream.REQUEST)
+    public void observe_t(@Payload final GeneratePdfRequest request) {
+        this.setStatus(path(request.getResultId().toString()), DocumentStatus.PENDING);
+        if (request.getDocument().getStorageType() == GeneratePdfRequest.StorageType.S3) {
+            this.nonStructuredPdfGenerator.generateAndSave(request);
+        } else {
+            this.structuredPdfGenerator.generateAndSave(request);
         }
-        catch (Exception ex) {
-            log.error("[OBSERVER] exception while observing documents status", ex);
-        }
+        this.setStatus(path(request.getResultId().toString()), DocumentStatus.GENERATED);
+    }
+
+    @Override
+    public void sendGeneratePdfRequest(final GeneratePdfRequest request) {
+        final Message message = MessageBuilder.withPayload(request)
+                .setHeader(KafkaHeaders.MESSAGE_KEY, request.getResultId().toString())
+                .build();
+        this.stream.generatePdfRequest().send(message);
+        this.putDocumentIDToObserve(request.getResultId().toString());
     }
 
     @Scheduled(fixedDelay = 1000)
@@ -95,24 +103,6 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    private void processDocumentCommand(final String documentId) {
-        try {
-            if ( !this.semaphore.tryAcquire(5, TimeUnit.SECONDS) ) {
-                log.warn("[OBSERVER] queue of pdf generation is full");
-                return;
-            }
-            final String jsonData = readDataByPath(dataPath(documentId))
-                    .map(String::new)
-                    .orElse(null);
-            this.structuredPDFGenerator.generateAndSave(documentId, jsonData);
-            setStatus(path(documentId), DocumentStatus.GENERATED);
-            this.semaphore.release();
-        } catch (Exception e) {
-            log.error("[OBSERVER] failed acquire lock", e);
-            this.semaphore.release();
-        }
-    }
-
     private void setStatus(final String path, final DocumentStatus status) {
         log.debug("[OBSERVER] update document under '{}' path. New status: '{}'", path, status.getStatus());
         try {
@@ -126,11 +116,7 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
     }
 
-    /**
-     * @see DocumentObserver#putDocumentIDToObserve(String)
-     */
-    @Override
-    public void putDocumentIDToObserve(final String documentID) {
+    private void putDocumentIDToObserve(final String documentID) {
         final String path = path(documentID);
         log.debug("[OBSERVER] registering transaction by '{}' path", path);
         try {
@@ -138,22 +124,6 @@ public class DocumentObserverImpl implements DocumentObserver {
         }
         catch (Exception ex) {
             log.error("[OBSERVER] exception while registering document by '{}' path", path, ex);
-        }
-    }
-
-    /**
-     * @see DocumentObserver#putDocumentIDToObserve(String, String)
-     */
-    @Override
-    public void putDocumentIDToObserve(final String documentID, final String data) {
-        this.putDocumentIDToObserve(documentID);
-        final String dataPath = dataPath(documentID);
-        log.debug("[OBSERVER] put data into '{}' path", dataPath);
-        try {
-            this.curator.create().forPath(dataPath, data.getBytes());
-        }
-        catch (Exception ex) {
-            log.error("[OBSERVER] exception while registering document by '{}' path", dataPath, ex);
         }
     }
 
@@ -207,10 +177,6 @@ public class DocumentObserverImpl implements DocumentObserver {
         return Optional.empty();
     }
 
-    /**
-     * @see DocumentObserver#deletePathWith(String)
-     */
-    @Override
     public void deletePathWith(final String documentID) {
         final String path = path(documentID);
         log.debug("[OBSERVER] deleting path '{}'", path);
@@ -229,7 +195,4 @@ public class DocumentObserverImpl implements DocumentObserver {
         return Constants.DOCUMENTS_ROOT + Constants.SEPARATOR + documentID;
     }
 
-    private String dataPath(final String documentID) {
-        return path(documentID) + Constants.SEPARATOR + "data";
-    }
 }

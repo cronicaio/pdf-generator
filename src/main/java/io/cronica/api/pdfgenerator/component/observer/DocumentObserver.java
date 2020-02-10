@@ -1,41 +1,20 @@
 package io.cronica.api.pdfgenerator.component.observer;
 
 import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
+import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
 
 import java.util.Optional;
 
 public interface DocumentObserver {
 
-    /**
-     * Register ID of document in ZooKeeper for further observing its status.
-     *
-     * @param documentID
-     *          - unique ID of document
-     */
-    void putDocumentIDToObserve(String documentID);
-
-    /**
-     * Register ID of document with data in ZooKeeper for further observing its status.
-     *
-     * @param documentID
-     *          - unique ID of document
-     */
-    void putDocumentIDToObserve(String documentID, String data);
+    void sendGeneratePdfRequest(GeneratePdfRequest request);
 
     /**
      * Get status of document.
      *
-     * @param documentID
+     * @param requestId
      *          - unique ID of document
-     * @return {@link DocumentStatus} object with current status of document ID.
+     * @return {@link DocumentStatus} object with current status of request ID.
      */
-    Optional<DocumentStatus> check(String documentID);
-
-    /**
-     * Delete ZNode from ZooKeeper with specified ID of document in the path.
-     *
-     * @param documentID
-     *          - unique ID of document
-     */
-    void deletePathWith(String documentID);
+    Optional<DocumentStatus> check(String requestId);
 }

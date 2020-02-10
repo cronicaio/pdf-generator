@@ -2,6 +2,7 @@ package io.cronica.api.pdfgenerator.service;
 
 import io.cronica.api.pdfgenerator.component.aws.AWSS3BucketAdapter;
 import io.cronica.api.pdfgenerator.component.aws.Repeater;
+import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
 import io.cronica.api.pdfgenerator.component.metrics.MethodID;
 import io.cronica.api.pdfgenerator.component.metrics.MetricsLogger;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
@@ -9,24 +10,23 @@ import io.cronica.api.pdfgenerator.component.wrapper.TemplateContract;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
+import io.cronica.api.pdfgenerator.exception.InvalidRequestException;
 import io.cronica.api.pdfgenerator.utils.ChaCha20Utils;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
-import org.web3j.crypto.WalletUtils;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Slf4j
 @RequiredArgsConstructor
-@Service
-public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
+@Service("structuredPDFGenerator")
+public class StructuredPDFGeneratorImpl implements PDFGenerator {
 
-    private static final Duration TIME_TO_LIVE = Duration.ofHours(24);
     private static final Duration TIME_TO_LIVE_EXAMPLES = Duration.ofDays(30);
 
     private final Repeater repeater;
@@ -46,17 +46,18 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
     private final IssuerRegistryTransactionService issuerRegistryTransactionService;
 
     /**
-     * @see StructuredPDFGenerator#generateAndSave(String, String)
+     * @see PDFGenerator#generateAndSave(GeneratePdfRequest)
      */
-    public void generateAndSave(final String documentID, @Nullable final String data) {
+    public void generateAndSave(final GeneratePdfRequest generatePdfRequest) {
         final StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
         try {
             byte[] documentData;
             final Duration expire;
-            if (DocumentUtils.isValidDocumentID(documentID)) {
-                final DocumentCertificate docCert = getDocumentCertificateByID(documentID);
+            if (generatePdfRequest.getDocument().getStorageType() == GeneratePdfRequest.StorageType.BLOCKCHAIN &&
+                    generatePdfRequest.getTemplate().getStorageType() == GeneratePdfRequest.StorageType.NOT_SET) {
+                final DocumentCertificate docCert = getDocumentCertificateByID(generatePdfRequest.getDocument().getId());
                 final TemplateHandler templateHandler = getTemplateHandlerAccordingToFileType(docCert);
                 templateHandler.generateTemplate();
                 templateHandler.downloadAdditionalFiles();
@@ -67,24 +68,37 @@ public class StructuredPDFGeneratorImpl implements StructuredPDFGenerator {
                 this.metricsLogger.incrementCount(MethodID.COUNT_OF_SUCCESSFUL_DOCUMENT_GENERATIONS);
                 this.metricsLogger.logExecutionTime(MethodID.TIME_OF_DOCUMENT_GENERATION, stopWatch.getTotalTimeMillis());
                 expire = TIME_TO_LIVE;
-            } else if(WalletUtils.isValidAddress(documentID)) {
-                final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(documentID, data);
+            } else if(generatePdfRequest.getTemplate().getStorageType() == GeneratePdfRequest.StorageType.BLOCKCHAIN) {
+                final String documentId = generatePdfRequest.getDocument().getId();
+                final String jsonData;
+                if (generatePdfRequest.getDocument().getStorageType() == GeneratePdfRequest.StorageType.CACHE &&
+                        this.redisDAO.exists(documentId)) {
+                    jsonData = new String(this.redisDAO.getDataByID(documentId), StandardCharsets.UTF_8);
+                    expire = TIME_TO_LIVE_PREVIEW_CACHE;
+                } else {
+                    jsonData = "{}";
+                    expire = TIME_TO_LIVE_EXAMPLES;
+                }
+                final TemplateHandler templateHandler = this.getHTMLTemplateHandlerForThumbnail(generatePdfRequest.getTemplate().getId(), jsonData);
                 templateHandler.generateTemplate();
                 templateHandler.downloadAdditionalFiles();
 
                 documentData = templateHandler.generatePDFDocument();
-                expire = (data == null ? TIME_TO_LIVE_EXAMPLES : TIME_TO_LIVE_PREVIEW_CACHE);
-            } else {
-                ByteBuffer templateZip = ByteBuffer.wrap(redisDAO.getDataByID(documentID));
+            } else if (generatePdfRequest.getTemplate().getStorageType() == GeneratePdfRequest.StorageType.CACHE &&
+                    generatePdfRequest.getDocument().getStorageType() == GeneratePdfRequest.StorageType.NOT_SET) {
+                final String templateId = generatePdfRequest.getTemplate().getId();
+                ByteBuffer templateZip = ByteBuffer.wrap(redisDAO.getDataByID(templateId));
 
                 documentData = generate(templateZip);
                 expire = TIME_TO_LIVE_PREVIEW_CACHE;
+            } else {
+                throw new InvalidRequestException("Incorrect PDF generating request");
             }
             // encrypt PDF before caching to Redis
             final byte[] encryptedDocument = ChaCha20Utils.encrypt(documentData);
-            this.redisDAO.saveData(encryptedDocument, documentID, expire);
+            this.redisDAO.saveData(encryptedDocument, generatePdfRequest.getResultId().toString(), expire);
         } catch (Exception ex) {
-            log.error("[SERVICE] exception while generating PDF with '{}' ID", documentID, ex);
+            log.error("[SERVICE] exception while generating PDF with '{}' ID", generatePdfRequest.getResultId().toString(), ex);
             this.metricsLogger.incrementCount(MethodID.COUNT_OF_FAILED_DOCUMENT_GENERATIONS);
         } finally {
             if (stopWatch.isRunning()) {

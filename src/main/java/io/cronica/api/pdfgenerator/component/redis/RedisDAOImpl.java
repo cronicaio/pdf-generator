@@ -8,6 +8,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -23,11 +24,11 @@ public class RedisDAOImpl implements RedisDAO {
      * @see RedisDAO#get(String)
      */
     @Override
-    public RedisDocument get(final String key) {
+    public Optional<RedisDocument> get(final String key) {
         log.info("[REDIS] reading object under '{}' key", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
         log.info("[REDIS] found object under '{}' key", key);
-        return this.kryoSerializer.deserialize(rBinaryStream.get());
+        return Optional.ofNullable(this.kryoSerializer.deserialize(rBinaryStream.get()));
     }
 
     /**

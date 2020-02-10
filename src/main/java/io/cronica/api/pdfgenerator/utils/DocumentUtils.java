@@ -40,7 +40,7 @@ public class DocumentUtils {
     private static final Pattern HEXADECIMAL_PATTERN = Pattern.compile("0x\\p{XDigit}+");
 
     public static String getSha256(final byte[] bytes) {
-        return Numeric.toHexStringNoPrefix(Hash.sha256(bytes));
+        return Numeric.toHexString(Hash.sha256(bytes));
     }
 
     public static String readDocumentAddress(final String documentID) {
