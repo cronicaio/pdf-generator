@@ -4,6 +4,7 @@ import io.cronica.api.pdfgenerator.component.metrics.MethodID;
 import io.cronica.api.pdfgenerator.component.metrics.MetricsLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.ThreadContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -17,6 +18,9 @@ import org.springframework.util.StopWatch;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
+
+import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_HEADER;
+import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_PARAM;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -47,8 +51,12 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
     }
 
     private HttpHeaders formHeaders() {
+        final String requestID = ThreadContext.get(REQUEST_ID_PARAM);
+
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.set(REQUEST_ID_HEADER, requestID);
+
         return headers;
     }
 
