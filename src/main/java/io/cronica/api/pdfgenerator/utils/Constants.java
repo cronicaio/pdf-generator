@@ -4,6 +4,12 @@ import java.math.BigInteger;
 
 public interface Constants {
 
+    /* HEADERS */
+    String REQUEST_ID_HEADER = "X-Request-ID";
+
+    /* LOG4J2 */
+    String REQUEST_ID_PARAM = "request.id";
+
     BigInteger GAS_PRICE = BigInteger.ZERO;
     BigInteger GAS_LIMIT = BigInteger.valueOf(2_000_000L);
 

@@ -9,6 +9,7 @@ import io.cronica.api.pdfgenerator.service.PDFDocumentService;
 import io.cronica.api.pdfgenerator.utils.PDFUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.ThreadContext;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -25,10 +26,10 @@ import reactor.core.publisher.Mono;
 
 import java.awt.image.BufferedImage;
 import java.net.URI;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+
+import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_HEADER;
+import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_PARAM;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -55,6 +56,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
+        requestIDLogging(serverRequest);
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))
                 .map(this.pdfDocumentService::generatePDFDocument)
                 .flatMap(this::generatePDFResponse)
@@ -66,6 +68,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generateThumbnail(final ServerRequest serverRequest) {
+        requestIDLogging(serverRequest);
         return Mono.justOrEmpty(serverRequest.pathVariable(TEMPLATE_ID_VARIABLE))
                 .map(Base64.getUrlDecoder()::decode)
                 .map(Numeric::toHexString)
@@ -80,6 +83,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generateDocumentPreview(final ServerRequest serverRequest) {
+        requestIDLogging(serverRequest);
         final String templateId = serverRequest.pathVariable(TEMPLATE_ID_VARIABLE);
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(DataJsonDTO.class)
@@ -91,7 +95,8 @@ public class RequestHandlerImpl implements RequestHandler {
     }
 
     @Override
-    public Mono<ServerResponse> generatePreview(ServerRequest serverRequest) {
+    public Mono<ServerResponse> generatePreview(final ServerRequest serverRequest) {
+        requestIDLogging(serverRequest);
         return serverRequest.body(BodyExtractors.toMultipartData())
                 .map(MultiValueMap::toSingleValueMap)
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
@@ -104,15 +109,20 @@ public class RequestHandlerImpl implements RequestHandler {
     }
 
     private Mono<ServerResponse> generatePDFResponse(final Document document) {
-        return generateFileResponse(document, MediaType.APPLICATION_PDF);
+        final Mono<ServerResponse> serverResponse = generateFileResponse(document, MediaType.APPLICATION_PDF);
+        ThreadContext.clearAll();
+        return serverResponse;
     }
 
 
     private Mono<ServerResponse> generatePNGResponse(final Document document) {
-        return generateFileResponse(document, MediaType.IMAGE_PNG);
+        final Mono<ServerResponse> serverResponse = generateFileResponse(document, MediaType.IMAGE_PNG);
+        ThreadContext.clearAll();
+        return serverResponse;
     }
 
     private Mono<ServerResponse> generateFileResponse(final Document document, final MediaType mediaType) {
+        ThreadContext.clearAll();
         final Resource resource = new ByteArrayResource(document.getFile());
         return ServerResponse
                 .ok()
@@ -122,6 +132,7 @@ public class RequestHandlerImpl implements RequestHandler {
     }
 
     private Mono<ServerResponse> generateJSONResponse(final Map<String, URI> body) {
+        ThreadContext.clearAll();
         return ServerResponse
                 .ok()
                 .contentType(MediaType.APPLICATION_JSON)
@@ -165,8 +176,17 @@ public class RequestHandlerImpl implements RequestHandler {
             }
         }
 
+        ThreadContext.clearAll();
+
         return ServerResponse
                 .status(httpStatus)
                 .body(Mono.just(new APIErrorResponseDTO(errorCode)), APIErrorResponseDTO.class);
+    }
+
+    private void requestIDLogging(final ServerRequest serverRequest) {
+        final List<String> requestIDs = serverRequest.headers().header(REQUEST_ID_HEADER);
+        if (requestIDs.size() > 0) {
+            ThreadContext.put(REQUEST_ID_PARAM, requestIDs.get(0));
+        }
     }
 }
