@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import io.cronica.api.pdfgenerator.component.ca.CronicaCAAdapter;
 import io.cronica.api.pdfgenerator.component.dto.DataJsonDTO;
 import io.cronica.api.pdfgenerator.component.entity.Document;
+import io.cronica.api.pdfgenerator.component.entity.DocumentStatus;
 import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
 import io.cronica.api.pdfgenerator.component.observer.DocumentObserver;
 import io.cronica.api.pdfgenerator.component.redis.RedisDAO;
@@ -65,7 +66,8 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             if (docCert.getIsStructured()) type = GeneratePdfRequest.StorageType.BLOCKCHAIN;
             else type = GeneratePdfRequest.StorageType.S3;
             final UUID resultId = this.createResultId(document.getDocumentID());
-            if ( !this.redisDAO.exists(resultId.toString()) ) {
+            final Optional<DocumentStatus> status = this.documentObserver.check(resultId.toString());
+            if ( (!this.redisDAO.exists(resultId.toString())) && status.isEmpty() ) {
                 final GeneratePdfRequest request = GeneratePdfRequest.builder()
                         .resultId(resultId)
                         .template(new GeneratePdfRequest.Content(null, GeneratePdfRequest.StorageType.NOT_SET))

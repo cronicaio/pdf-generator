@@ -5,7 +5,6 @@ import io.cronica.api.pdfgenerator.component.kafka.entities.GeneratePdfRequest;
 import io.cronica.api.pdfgenerator.component.kafka.stream.GeneratePdfStream;
 import io.cronica.api.pdfgenerator.service.PDFGenerator;
 import io.cronica.api.pdfgenerator.utils.Constants;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
@@ -78,8 +77,8 @@ public class DocumentObserverImpl implements DocumentObserver {
         final Message message = MessageBuilder.withPayload(request)
                 .setHeader(KafkaHeaders.MESSAGE_KEY, request.getResultId().toString())
                 .build();
-        this.stream.generatePdfRequest().send(message);
         this.putDocumentIDToObserve(request.getResultId().toString());
+        this.stream.generatePdfRequest().send(message);
     }
 
     @Scheduled(fixedDelay = 1000)
