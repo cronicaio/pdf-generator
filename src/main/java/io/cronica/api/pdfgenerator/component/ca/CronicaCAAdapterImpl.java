@@ -19,8 +19,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_HEADER;
-import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_PARAM;
+import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -52,10 +51,12 @@ public class CronicaCAAdapterImpl implements CronicaCAAdapter {
 
     private HttpHeaders formHeaders() {
         final String requestID = ThreadContext.get(REQUEST_ID_PARAM);
+        final String origin = ThreadContext.get(REQUEST_ORIGIN_PARAM);
 
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.set(REQUEST_ID_HEADER, requestID);
+        headers.set(X_FORWARDED_FOR_HEADER, origin);
 
         return headers;
     }
