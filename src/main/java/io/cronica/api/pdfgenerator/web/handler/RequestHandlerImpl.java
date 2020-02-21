@@ -28,8 +28,7 @@ import java.awt.image.BufferedImage;
 import java.net.URI;
 import java.util.*;
 
-import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_HEADER;
-import static io.cronica.api.pdfgenerator.utils.Constants.REQUEST_ID_PARAM;
+import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -56,7 +55,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generatePDF(final ServerRequest serverRequest) {
-        requestIDLogging(serverRequest);
+        customizeThreadContext(serverRequest);
         return Mono.justOrEmpty(serverRequest.pathVariable(UUID_PATH_VARIABLE))
                 .map(this.pdfDocumentService::generatePDFDocument)
                 .flatMap(this::generatePDFResponse)
@@ -68,7 +67,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generateThumbnail(final ServerRequest serverRequest) {
-        requestIDLogging(serverRequest);
+        customizeThreadContext(serverRequest);
         return Mono.justOrEmpty(serverRequest.pathVariable(TEMPLATE_ID_VARIABLE))
                 .map(Base64.getUrlDecoder()::decode)
                 .map(Numeric::toHexString)
@@ -83,7 +82,7 @@ public class RequestHandlerImpl implements RequestHandler {
      */
     @Override
     public Mono<ServerResponse> generateDocumentPreview(final ServerRequest serverRequest) {
-        requestIDLogging(serverRequest);
+        customizeThreadContext(serverRequest);
         final String templateId = serverRequest.pathVariable(TEMPLATE_ID_VARIABLE);
         final String templateAddress = Numeric.toHexString(Base64.getUrlDecoder().decode(templateId));
         return serverRequest.bodyToMono(DataJsonDTO.class)
@@ -96,7 +95,7 @@ public class RequestHandlerImpl implements RequestHandler {
 
     @Override
     public Mono<ServerResponse> generatePreview(final ServerRequest serverRequest) {
-        requestIDLogging(serverRequest);
+        customizeThreadContext(serverRequest);
         return serverRequest.body(BodyExtractors.toMultipartData())
                 .map(MultiValueMap::toSingleValueMap)
                 .map(stringPartMap -> stringPartMap.get(TEMPLATE_FILE))
@@ -183,10 +182,17 @@ public class RequestHandlerImpl implements RequestHandler {
                 .body(Mono.just(new APIErrorResponseDTO(errorCode)), APIErrorResponseDTO.class);
     }
 
-    private void requestIDLogging(final ServerRequest serverRequest) {
+    private void customizeThreadContext(final ServerRequest serverRequest) {
+        // customize 'request.id'
         final List<String> requestIDs = serverRequest.headers().header(REQUEST_ID_HEADER);
         if (requestIDs.size() > 0) {
             ThreadContext.put(REQUEST_ID_PARAM, requestIDs.get(0));
+        }
+        // customize 'request.origin'
+        final List<String> ipAddresses = serverRequest.headers().header(X_FORWARDED_FOR_HEADER);
+        if (ipAddresses.size() > 0) {
+            final String origin = String.join(",", ipAddresses);
+            ThreadContext.put(REQUEST_ORIGIN_PARAM, origin);
         }
     }
 }

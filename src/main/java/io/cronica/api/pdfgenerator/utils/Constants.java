@@ -6,9 +6,11 @@ public interface Constants {
 
     /* HEADERS */
     String REQUEST_ID_HEADER = "X-Request-ID";
+    String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
 
     /* LOG4J2 */
     String REQUEST_ID_PARAM = "request.id";
+    String REQUEST_ORIGIN_PARAM = "request.origin";
 
     BigInteger GAS_PRICE = BigInteger.ZERO;
     BigInteger GAS_LIMIT = BigInteger.valueOf(2_000_000L);
