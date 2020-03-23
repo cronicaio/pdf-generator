@@ -26,8 +26,8 @@ import java.util.Map;
 @Slf4j
 public class DocumentUtils {
 
-    public static String getSha256(final byte[] bytes) {
-        return Numeric.toHexStringNoPrefix(Hash.sha256(bytes));
+    public static byte[] getSha256(final byte[] bytes) {
+        return Hash.sha256(bytes);
     }
 
     public static String readDocumentAddress(final String documentID) {
