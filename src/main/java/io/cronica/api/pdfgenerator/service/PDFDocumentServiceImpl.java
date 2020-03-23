@@ -19,10 +19,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Service;
+import org.web3j.utils.Numeric;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -106,12 +108,12 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private Document downloadNonStructuredDocument(final RedisDocument redisDocument) {
         final String documentAddress = DocumentUtils.readDocumentAddress(redisDocument.getDocumentID());
-        final String deployedHash = this.documentTransactionService.getHash(documentAddress);
+        final byte[] deployedHash = Numeric.hexStringToByteArray(this.documentTransactionService.getHash(documentAddress));
 
         final byte[] buffer = downloadPDFDocumentFromS3(redisDocument.getDocumentID());
-        final String calculatedHash = DocumentUtils.getSha256(buffer);
+        final byte[] calculatedHash = DocumentUtils.getSha256(buffer);
 
-        if ( !deployedHash.equals(calculatedHash) ) {
+        if ( !Arrays.equals(deployedHash, calculatedHash) ) {
             log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
             throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
         }
