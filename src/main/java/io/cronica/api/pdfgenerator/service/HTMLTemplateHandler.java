@@ -322,7 +322,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
         final List<String> command = new ArrayList<>();
         command.add("wkhtmltopdf");
         command.add("--margin-bottom");
-        command.add("42");
+        command.add("62");
         command.add("--margin-left");
         command.add("0");
         command.add("--margin-right");
