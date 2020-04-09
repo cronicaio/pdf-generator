@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedisDAOImpl implements RedisDAO {
 
-    private static final long TIME_TO_LIVE_HOURS = 24;
+    private static final long TIME_TO_LIVE_DAYS = 30;
 
     private final RedissonClient redissonClient;
 
@@ -49,7 +49,7 @@ public class RedisDAOImpl implements RedisDAO {
         log.info("[REDIS] saving PDF document under key '{}' ", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
         rBinaryStream.set(document);
-        rBinaryStream.expire(TIME_TO_LIVE_HOURS, TimeUnit.HOURS);
+        rBinaryStream.expire(TIME_TO_LIVE_DAYS, TimeUnit.DAYS);
         log.info("[REDIS] PDF document has been saved under '{}' key", key);
         return true;
     }
