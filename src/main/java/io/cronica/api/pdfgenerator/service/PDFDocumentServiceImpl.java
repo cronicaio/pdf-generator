@@ -117,10 +117,9 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             log.info("[SERVICE] hash is not valid; expected: '{}', actual: '{}'", deployedHash, calculatedHash);
             throw new DocumentNotFoundException("Document with '" + redisDocument.getDocumentID() + "' does not found");
         }
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(buffer);
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
 
-        return Document.newInstance(fileName, signedDocument);
+        return Document.newInstance(fileName, buffer);
     }
 
     private byte[] downloadPDFDocumentFromS3(final String documentId) {
@@ -145,9 +144,8 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
         final String fileName = "DC-" + redisDocument.getDocumentID() + ".pdf";
-        final byte[] signedDocument = this.cronicaCAAdapter.signDocument(documentBytes);
 
-        return Document.newInstance(fileName, signedDocument);
+        return Document.newInstance(fileName, documentBytes);
     }
 
     private void waitForDocument(final String documentID) {
