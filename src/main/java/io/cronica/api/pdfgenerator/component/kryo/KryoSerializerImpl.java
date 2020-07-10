@@ -17,7 +17,7 @@ public class KryoSerializerImpl implements KryoSerializer {
 
     public KryoSerializerImpl() {
         this.kryo = new Kryo();
-        this.kryo.register(RedisDocument.class);
+        this.kryo.register(RedisDocument.class, 100);
     }
 
     @Override
