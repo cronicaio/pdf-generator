@@ -114,7 +114,8 @@ public class DocumentUtils {
                 }
             }
             log.info("[UTILITY] QR-code image has been generated");
-            return addOverlayLogo(image);
+//            return addOverlayLogo(image); // Temporary disabled overlay with Cronica logo
+            return image;
         }
         catch (WriterException ex) {
             log.error("[UTILITY] unable to generate QR code", ex);
