@@ -1,5 +1,8 @@
 package io.cronica.api.pdfgenerator.component.redis;
 
+import java.time.Duration;
+import java.util.Optional;
+
 public interface RedisDAO {
 
     /**
@@ -9,7 +12,19 @@ public interface RedisDAO {
      *          - key to record
      * @return {@link RedisDocument} object saved under specified key
      */
-    RedisDocument get(String key);
+    Optional<RedisDocument> get(String key);
+
+    /**
+     * Save {@link RedisDocument} object under specified key to Redis.
+     *
+     * @param key
+     *          - key to record
+     * @param redisDocument
+     *          - object which necessary to store
+     * @param expire
+     *          - expiration of document when it will be automatically deleted
+     */
+    void save(String key, RedisDocument redisDocument, Duration expire);
 
     /**
      * Check whether {@link RedisDocument} with specified key exists.
@@ -27,9 +42,11 @@ public interface RedisDAO {
      *          - PDF document in the representation of byte array
      * @param key
      *          - key to PDF
+     * @param expire
+     *          - expiration of data when it will be automatically deleted
      * @return {@code true} if successfully saved, {@code false} otherwise
      */
-    boolean savePDF(byte[] document, String key);
+    boolean saveData(byte[] document, String key, Duration expire);
 
     /**
      * Read PDF document from Redis identified by document ID.
@@ -38,5 +55,5 @@ public interface RedisDAO {
      *          - key to PDF
      * @return file as array of bytes
      */
-    byte[] getPDFByID(String key);
+    byte[] getDataByID(String key);
 }

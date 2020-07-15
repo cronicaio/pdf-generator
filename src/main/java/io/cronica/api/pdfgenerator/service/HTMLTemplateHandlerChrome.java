@@ -17,6 +17,7 @@ import io.cronica.api.pdfgenerator.utils.HTMLUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.context.annotation.Scope;
 
@@ -178,7 +179,7 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
      * @see TemplateHandler#generatePDFDocument()
      */
     @Override
-    public InputStream generatePDFDocument() throws Exception {
+    public byte[] generatePDFDocument() throws Exception {
         final String uuid = UUID.randomUUID().toString();
 
         log.info("[SERVICE] begin generating a PDF document using HTML template");
@@ -199,7 +200,7 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
         }
 
         log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
-        return inputStream;
+        return IOUtils.toByteArray(inputStream);
     }
 
     private InputStream requestToChrome(
@@ -308,8 +309,8 @@ public class HTMLTemplateHandlerChrome implements TemplateHandler  {
     private byte[] generateQrCodeImageFrom(final String linkToPdfDocument) throws IOException {
         BufferedImage originalImage = DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
-                100,
-                100);
+                QR_CODE_IMAGE_WIDTH,
+                QR_CODE_IMAGE_HEIGHT);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(originalImage, "png", baos);
         baos.flush();

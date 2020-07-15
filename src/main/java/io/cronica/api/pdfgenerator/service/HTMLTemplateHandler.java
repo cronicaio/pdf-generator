@@ -12,6 +12,7 @@ import io.cronica.api.pdfgenerator.utils.HTMLUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.context.annotation.Scope;
 
@@ -27,6 +28,8 @@ import static io.cronica.api.pdfgenerator.utils.Constants.*;
 @Slf4j
 @Scope("prototype")
 public class HTMLTemplateHandler implements TemplateHandler {
+
+    private static final String TEMPLATE_EXAMPLE = "TEMPLATE_EXAMPLE";
 
     private final String bankCode;
 
@@ -70,6 +73,25 @@ public class HTMLTemplateHandler implements TemplateHandler {
         this.templateID = documentTransactionService.getTemplateID(documentAddress);
         this.bankCode = documentTransactionService.getBankCode(documentAddress);
         this.dataJson = documentTransactionService.getStructuredData(documentAddress);
+    }
+
+    public HTMLTemplateHandler(
+            Repeater repeater,
+            AWSS3BucketAdapter awss3BucketAdapter,
+            IssuerRegistryTransactionService issuerService,
+            TemplateTransactionService templateTransactionService,
+            String templateID,
+            String jsonData
+    ) {
+        this.repeater = repeater;
+        this.awss3BucketAdapter = awss3BucketAdapter;
+        this.issuerService = issuerService;
+        this.transactionService = templateTransactionService;
+
+        this.documentID = templateID;
+        this.templateID = templateID;
+        this.bankCode = "";
+        this.dataJson = jsonData;
     }
 
     /**
@@ -164,7 +186,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
      * @see TemplateHandler#generatePDFDocument()
      */
     @Override
-    public InputStream generatePDFDocument() throws Exception {
+    public byte[] generatePDFDocument() throws Exception {
         final String uuid = UUID.randomUUID().toString();
         final String fileName = "DC-" + uuid + ".pdf";
         final File document = new File(PATH_TO_PDF_DOCUMENTS + "/" + fileName);
@@ -190,7 +212,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
             }
 
             log.info("[SERVICE] successfully generated PDF document with '{}' ID, using HTML", this.documentID);
-            return new FileInputStream(document);
+            return IOUtils.toByteArray(new FileInputStream(document));
         }
         finally {
             deleteFile(document);
@@ -228,24 +250,32 @@ public class HTMLTemplateHandler implements TemplateHandler {
         HTMLUtils.importFontsIntoHtml(templateWithData, fontEntityList);
     }
 
-    private void insertQrCodeIfNeeded() throws Exception {
-        final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
-        if (qrCodeImageTagsFound) {
-            final String linkToPdfDocument = getLinkToPdfDocument();
-            final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
+    private void insertQrCodeIfNeeded() {
+        try {
+            final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
+            if (qrCodeImageTagsFound) {
+                final String linkToPdfDocument = getLinkToPdfDocument();
+                final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
 
-            HTMLUtils.insertQrCodeImagePathAndAltText(
-                    qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
-            );
+                HTMLUtils.insertQrCodeImagePathAndAltText(
+                        qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
+                );
+            }
+        } catch (Exception e) {
+            log.error("[SERVICE] Error inserting QR code image", e);
         }
     }
 
     private String getLinkToPdfDocument() throws IssuerNotFoundException {
-        final Issuer issuer = this.issuerService.getIssuerByBankCode(this.bankCode);
+        if (this.bankCode.isEmpty()) {
+            return TEMPLATE_EXAMPLE;
+        } else {
+            final Issuer issuer = this.issuerService.getIssuerByBankCode(this.bankCode);
 
-        return issuer.getFrontEndLink()
-                + SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL
-                + this.documentID;
+            return issuer.getFrontEndLink()
+                    + SEARCH_BY_ID_STRUCTURED_FRONTEND_BASIC_URL
+                    + this.documentID;
+        }
     }
 
     private File generateQrCodeImageFrom(final String linkToPdfDocument) {
@@ -254,8 +284,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
                  + "QR-" + this.documentID + PNG_FILE_EXTENSION);
         DocumentUtils.generateQRCodeImage(
                 linkToPdfDocument,
-                100,
-                100,
+                QR_CODE_IMAGE_WIDTH,
+                QR_CODE_IMAGE_HEIGHT,
                 qrCodeImage.getAbsolutePath());
         return qrCodeImage;
     }

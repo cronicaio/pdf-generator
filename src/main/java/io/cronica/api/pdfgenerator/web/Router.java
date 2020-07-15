@@ -1,6 +1,7 @@
 package io.cronica.api.pdfgenerator.web;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 import io.cronica.api.pdfgenerator.web.handler.RequestHandler;
@@ -19,6 +20,9 @@ public class Router {
     @Bean
     public RouterFunction<ServerResponse> composedRouter() {
         return route(GET("/"), this.requestHandler::healthCheck)
-                .andRoute(GET("/v1/pdf/{uuid}"), this.requestHandler::generatePDF);
+                .andRoute(GET("/v1/pdf/{uuid}"), this.requestHandler::generatePDF)
+                .andRoute(GET("/v1/pdf/thumbnail/{templateId}"), this.requestHandler::generateThumbnail)
+                .andRoute(POST("/v1/pdf/preview/{templateId}"), this.requestHandler::generateDocumentPreview)
+                .andRoute(POST("/v1/pdf/preview"), this.requestHandler::generatePreview);
     }
 }
