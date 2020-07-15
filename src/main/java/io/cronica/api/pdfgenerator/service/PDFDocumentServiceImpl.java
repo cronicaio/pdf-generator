@@ -78,7 +78,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             return resultId;
         }).orElse(UUID.fromString(uuid));
         try {
-            return generateDownloadableDocument(uid, redisDocument.isPresent());
+            return generateDownloadableDocument(uid);
         } catch (Exception ex) {
             log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
             throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
@@ -100,7 +100,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
                         .build();
                 this.documentObserver.sendGeneratePdfRequest(request);
             }
-            return generateDownloadableDocument(uid, false);
+            return generateDownloadableDocument(uid);
         } catch (Exception ex) {
             log.error("[SERVICE] exception while generating PDF of structured document", ex);
             return new Document();
@@ -174,20 +174,19 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return dc;
     }
 
-    private Document generateDownloadableDocument(final UUID resultId, boolean makeSign) {
+    private Document generateDownloadableDocument(final UUID resultId) {
         waitForDocument(resultId);
-        return loadStructuredDocumentFromCache(resultId, makeSign);
+        return loadStructuredDocumentFromCache(resultId);
     }
 
-    private Document loadStructuredDocumentFromCache(final UUID resultId, boolean makeSign) {
+    private Document loadStructuredDocumentFromCache(final UUID resultId) {
         final String uid = resultId.toString();
         final byte[] cachedPDF = this.redisDAO.getDataByID(uid);
         final byte[] documentBytes = ChaCha20Utils.decrypt(cachedPDF);
 
         final String fileName = "DC-" + uid + ".pdf";
-        final byte[] signedDocument = makeSign ? this.cronicaCAAdapter.signDocument(documentBytes) : documentBytes;
 
-        return Document.newInstance(fileName, signedDocument);
+        return Document.newInstance(fileName, documentBytes);
     }
 
     private void waitForDocument(final UUID resultId) {
