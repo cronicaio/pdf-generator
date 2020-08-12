@@ -228,7 +228,7 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
             final List<Type> result = FunctionReturnDecoder.decode(data, Utils.convert(rValues));
             if (!result.isEmpty()) {
                 final DocumentData documentData = new DocumentData();
-                documentData.setBankCode(((Utf8String) result.get(0)).getValue());
+                documentData.setBankCode(((Utf8String) result.get(0)).getValue().replaceAll("[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}]", ""));
                 documentData.setDocumentName(((Utf8String) result.get(1)).getValue());
                 documentData.setRecipientId(result.get(2).getTypeAsString().equals(Utf8String.TYPE_NAME) ? ((Utf8String) result.get(2)).getValue() : Numeric.toHexString(((Bytes20) result.get(2)).getValue()));
                 documentData.setIssueTimestamp(((Uint64) result.get(3)).getValue().longValue());

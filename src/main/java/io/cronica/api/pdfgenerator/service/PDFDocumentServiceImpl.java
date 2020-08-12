@@ -78,7 +78,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
             return resultId;
         }).orElse(UUID.fromString(uuid));
         try {
-            return generateDownloadableDocument(uid, redisDocument.isPresent());
+            return generateDownloadableDocument(uid, true);
         } catch (Exception ex) {
             log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
             throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
