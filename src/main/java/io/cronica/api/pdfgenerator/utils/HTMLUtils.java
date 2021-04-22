@@ -14,12 +14,28 @@ import org.jsoup.select.Elements;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 import static io.cronica.api.pdfgenerator.utils.Constants.*;
 
 @Slf4j
 public class HTMLUtils {
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy hh:mm a");
+
+    public static final Map<String, Supplier<String>> PRE_DEFINED_KEYS;
+
+    static {
+        PRE_DEFINED_KEYS = new HashMap<String, Supplier<String>>() {{
+            put(Constants.KEY_VERIFICATION_TIMESTAMP, HTMLUtils::get_current_date);
+            put(Constants.KEY_VERIFICATION_TIMESTAMP_JO, HTMLUtils::get_current_date_eet);
+        }};
+    }
 
     public static List<Font> readFonts(final String pathToFolder) throws IOException {
         final List<Font> fontList = new ArrayList<>();
@@ -119,6 +135,12 @@ public class HTMLUtils {
             if ( !(parameters.get(key) instanceof Collection<?>) && fullDocument.contains(key)) {
                 final String parameter = parameters.get(key).toString();
                 fullDocument = StringUtils.replace(fullDocument, key, parameter);
+            }
+        }
+        for (Entry<String, Supplier<String>> entry : PRE_DEFINED_KEYS.entrySet()) {
+            if (fullDocument.contains(entry.getKey())) {
+                final String value = entry.getValue().get();
+                fullDocument = StringUtils.replace(fullDocument, entry.getKey(), value);
             }
         }
         log.info("[HTML] variables in HTML document have been replaced with values");
@@ -330,5 +352,17 @@ public class HTMLUtils {
     private static boolean hasValidLinkAttr(final Element linkTag) {
         return linkTag.hasAttr("document-link")
                && linkTag.attr("document-link").equals("true");
+    }
+
+    private static String get_current_date() {
+        Instant now = Instant.now();
+        ZonedDateTime current = now.atZone(ZoneId.systemDefault());
+        return current.format(formatter);
+    }
+
+    private static String get_current_date_eet() {
+        Instant now = Instant.now();
+        ZonedDateTime current = now.atZone(ZoneId.of("EET"));
+        return current.format(formatter);
     }
 }

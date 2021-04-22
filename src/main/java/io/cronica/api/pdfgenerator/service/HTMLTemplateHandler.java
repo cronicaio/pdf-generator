@@ -195,7 +195,7 @@ public class HTMLTemplateHandler implements TemplateHandler {
             log.info("[SERVICE] begin generating a PDF document using HTML template");
             final File preparedTemplate = prepareTemplateForGenerating(uuid);
             importFontsInto(preparedTemplate);
-            insertQrCodeIfNeeded();
+            insertQrCodeIfNeeded(preparedTemplate);
             final File headerFile = findHeaderFile(preparedTemplate.getAbsolutePath());
             final File footerFile = findFooterFile(preparedTemplate.getAbsolutePath());
 
@@ -250,15 +250,15 @@ public class HTMLTemplateHandler implements TemplateHandler {
         HTMLUtils.importFontsIntoHtml(templateWithData, fontEntityList);
     }
 
-    private void insertQrCodeIfNeeded() {
+    private void insertQrCodeIfNeeded(File template) {
         try {
-            final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(this.template);
+            final boolean qrCodeImageTagsFound = HTMLUtils.findQRCodeImageTags(template);
             if (qrCodeImageTagsFound) {
                 final String linkToPdfDocument = getLinkToPdfDocument();
                 final File qrCodeImage = generateQrCodeImageFrom(linkToPdfDocument);
 
                 HTMLUtils.insertQrCodeImagePathAndAltText(
-                        qrCodeImage.getAbsolutePath(), linkToPdfDocument, this.template
+                        qrCodeImage.getAbsolutePath(), linkToPdfDocument, template
                 );
             }
         } catch (Exception e) {
