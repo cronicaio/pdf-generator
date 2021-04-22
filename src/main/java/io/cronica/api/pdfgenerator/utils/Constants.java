@@ -67,4 +67,7 @@ public interface Constants {
     String JPEG_FILE_EXTENSION_WITH_DOT = ".jpg";
     String PNG_FILE_EXTENSION_WITH_DOT = ".png";
 
+    String KEY_VERIFICATION_TIMESTAMP = "@@@verification_timestamp@@@";
+    String KEY_VERIFICATION_TIMESTAMP_JO = "@@@verification_timestamp_jo@@@";
+
 }
