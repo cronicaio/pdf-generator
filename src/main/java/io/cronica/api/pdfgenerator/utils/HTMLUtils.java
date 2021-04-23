@@ -131,16 +131,16 @@ public class HTMLUtils {
 
         log.info("[HTML] replacing variables in HTML document with values");
         String fullDocument = htmlDocument.html();
-        for (String key : parameters.keySet()) {
-            if ( !(parameters.get(key) instanceof Collection<?>) && fullDocument.contains(key)) {
-                final String parameter = parameters.get(key).toString();
-                fullDocument = StringUtils.replace(fullDocument, key, parameter);
-            }
-        }
         for (Entry<String, Supplier<String>> entry : PRE_DEFINED_KEYS.entrySet()) {
             if (fullDocument.contains(entry.getKey())) {
                 final String value = entry.getValue().get();
                 fullDocument = StringUtils.replace(fullDocument, entry.getKey(), value);
+            }
+        }
+        for (String key : parameters.keySet()) {
+            if ( !(parameters.get(key) instanceof Collection<?>) && fullDocument.contains(key)) {
+                final String parameter = parameters.get(key).toString();
+                fullDocument = StringUtils.replace(fullDocument, key, parameter);
             }
         }
         log.info("[HTML] variables in HTML document have been replaced with values");
