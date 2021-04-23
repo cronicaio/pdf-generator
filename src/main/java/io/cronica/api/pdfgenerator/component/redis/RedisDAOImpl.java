@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedisDAOImpl implements RedisDAO {
 
-    private static final long TIME_TO_LIVE_DAYS = 30;
-
     private final RedissonClient redissonClient;
 
     private final KryoSerializer kryoSerializer;
@@ -64,7 +62,7 @@ public class RedisDAOImpl implements RedisDAO {
         log.info("[REDIS] saving data under key '{}' ", key);
         final RBinaryStream rBinaryStream = this.redissonClient.getBinaryStream(key);
         rBinaryStream.set(document);
-        rBinaryStream.expire(TIME_TO_LIVE_DAYS, TimeUnit.DAYS);
+        rBinaryStream.expire(expire.getSeconds(), TimeUnit.SECONDS);
         log.info("[REDIS] data has been saved under '{}' key", key);
         return true;
     }
