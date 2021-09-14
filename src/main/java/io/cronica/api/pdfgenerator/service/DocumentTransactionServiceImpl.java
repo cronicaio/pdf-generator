@@ -221,11 +221,16 @@ public class DocumentTransactionServiceImpl implements DocumentTransactionServic
                 .send();
 
         String data = ethCall.getValue();
-        List<List<TypeReference<?>>> rValuesList = Arrays.asList(StructuredDoc.R_VALUES_DATA_V1, StructuredDoc.R_VALUES_DATA_LEGACY, NonStructuredDoc.R_VALUES_DATA_V1, NonStructuredDoc.R_VALUES_DATA_LEGACY);
+        List<List<TypeReference<?>>> rValuesList = Arrays.asList(StructuredDoc.R_VALUES_DATA_V1, NonStructuredDoc.R_VALUES_DATA_V1, StructuredDoc.R_VALUES_DATA_LEGACY, NonStructuredDoc.R_VALUES_DATA_LEGACY);
         for (List<TypeReference<?>> rValues : rValuesList) {
             log.info("[BLOCKCHAIN] trying decoding document data with types ({})",
                     Utils.convert(rValues).stream().map(TypeReference::getType).map(java.lang.reflect.Type::getTypeName).collect(Collectors.joining(",")));
-            final List<Type> result = FunctionReturnDecoder.decode(data, Utils.convert(rValues));
+            List<Type> result;
+            try {
+                result = FunctionReturnDecoder.decode(data, Utils.convert(rValues));
+            } catch (Exception e) {
+                result = Collections.emptyList();
+            }
             if (!result.isEmpty()) {
                 final DocumentData documentData = new DocumentData();
                 documentData.setBankCode(((Utf8String) result.get(0)).getValue().replaceAll("[\\p{Cc}\\p{Cf}\\p{Co}\\p{Cn}]", ""));

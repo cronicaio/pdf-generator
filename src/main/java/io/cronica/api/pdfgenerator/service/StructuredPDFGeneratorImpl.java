@@ -131,11 +131,6 @@ public class StructuredPDFGeneratorImpl implements PDFGenerator {
                     this.repeater, this.awss3BucketAdapter, dc, this.issuerRegistryTransactionService,
                     this.templateTransactionService, this.documentTransactionService);
         }
-        else if (fileType.equals("jrxml")) {
-            return new JasperSoftTemplateHandler(
-                    this.repeater, this.awss3BucketAdapter, dc,
-                    this.issuerRegistryTransactionService, this.templateTransactionService, this.documentTransactionService);
-        }
         else {
             throw new RuntimeException("File with " + fileType + " extension is not supporting");
         }
