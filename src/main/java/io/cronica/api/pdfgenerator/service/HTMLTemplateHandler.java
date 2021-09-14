@@ -360,10 +360,8 @@ public class HTMLTemplateHandler implements TemplateHandler {
         command.add("--page-size");
         command.add("A4");
         if (headerHtmlFile != null) {
-            command.add("--margin-top");
-            command.add("85.75");
             command.add("--header-spacing");
-            command.add("1");
+            command.add("5");
             command.add("--header-html");
             command.add(headerHtmlFile.getAbsolutePath());
         }
