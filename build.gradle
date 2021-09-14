@@ -21,8 +21,6 @@ configurations {
 
 repositories {
     mavenCentral()
-    maven { url 'http://jaspersoft.artifactoryonline.com/jaspersoft/third-party-ce-artifacts/' }
-    maven { url 'http://jasperreports.sourceforge.net/maven2' }
 }
 
 ext {
@@ -48,8 +46,6 @@ dependencies {
     implementation group: 'org.web3j', name: 'codegen', version: '4.1.0'
 
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.603'
-
-    implementation group: 'net.sf.jasperreports', name: 'jasperreports', version: '6.5.1'
 
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.11.3'
 
