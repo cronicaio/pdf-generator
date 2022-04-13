@@ -173,6 +173,10 @@ public class RequestHandlerImpl implements RequestHandler {
                 errorCode = ErrorCode.QUORUM_NODE_EXCEPTION;
                 httpStatus = HttpStatus.BAD_GATEWAY;
             }
+            else if (throwable instanceof DocumentPendingException) {
+                errorCode = ErrorCode.DOCUMENT_NOT_GENERATED_YET;
+                httpStatus = HttpStatus.NOT_FOUND;
+            }
         }
 
         ThreadContext.clearAll();
