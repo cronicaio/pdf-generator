@@ -57,7 +57,7 @@ public class NonStructuredDoc extends Contract {
     public static final String FUNC_VERSION = "version";
 
     public static final List<TypeReference<?>> R_VALUES_DATA_LEGACY = Arrays.asList(new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint64>() {}, new TypeReference<Uint64>() {}, new TypeReference<Bytes32>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint8>() {});
-    public static final List<TypeReference<?>> R_VALUES_DATA_V1 = Arrays.asList(new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Bytes32>() {}, new TypeReference<Uint64>() {}, new TypeReference<Uint64>() {}, new TypeReference<Bytes32>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint8>() {});
+    public static final List<TypeReference<?>> R_VALUES_DATA_V1 = Arrays.asList(new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Bytes20>() {}, new TypeReference<Uint64>() {}, new TypeReference<Uint64>() {}, new TypeReference<Bytes32>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint8>() {});
 
     public static final List<TypeReference<?>> R_VALUES_VERSION = Arrays.asList(new TypeReference<Uint8>() {}, new TypeReference<Uint32>() {});
 

@@ -1,9 +1,8 @@
 plugins {
     id 'org.springframework.boot' version '2.1.6.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
 }
-
-apply plugin: 'io.spring.dependency-management'
 
 group = 'io.cronica.api'
 version = '1.0.0'
@@ -21,8 +20,6 @@ configurations {
 
 repositories {
     mavenCentral()
-    maven { url 'http://jaspersoft.artifactoryonline.com/jaspersoft/third-party-ce-artifacts/' }
-    maven { url 'http://jasperreports.sourceforge.net/maven2' }
 }
 
 ext {
@@ -32,7 +29,7 @@ ext {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
-    implementation 'org.springframework.cloud:spring-cloud-starter-vault-config:2.1.1.RELEASE'
+    implementation 'org.springframework.cloud:spring-cloud-starter-vault-config'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
     implementation 'org.springframework.cloud:spring-cloud-starter-stream-kafka'
@@ -48,8 +45,6 @@ dependencies {
     implementation group: 'org.web3j', name: 'codegen', version: '4.1.0'
 
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.603'
-
-    implementation group: 'net.sf.jasperreports', name: 'jasperreports', version: '6.5.1'
 
     implementation group: 'org.jsoup', name: 'jsoup', version: '1.11.3'
 
@@ -73,7 +68,7 @@ dependencies {
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.13.2'
