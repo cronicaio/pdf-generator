@@ -177,20 +177,23 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     }
 
     private Document generateDownloadableDocument(final UUID resultId, boolean makeSign) {
-        waitForDocument(resultId);
-        final Optional<DocumentStatus> status = this.documentObserver.check(resultId.toString());
-        return status.map(documentStatus -> {
-            switch (documentStatus) {
-                case GENERATED:
-                    return loadStructuredDocumentFromCache(resultId, makeSign);
-                case PENDING:
-                    throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'pending' state", resultId));
-                case REGISTERED:
-                    throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'registered' state", resultId));
-                default:
-                    throw new UnsupportedOperationException();
-            }
-        }).orElseThrow();
+        if(waitForDocument(resultId)) {
+            return loadStructuredDocumentFromCache(resultId, makeSign);
+        } else {
+            final Optional<DocumentStatus> status = this.documentObserver.check(resultId.toString());
+            return status.map(documentStatus -> {
+                switch (documentStatus) {
+                    case GENERATED:
+                        return loadStructuredDocumentFromCache(resultId, makeSign);
+                    case PENDING:
+                        throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'pending' state", resultId));
+                    case REGISTERED:
+                        throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'registered' state", resultId));
+                    default:
+                        throw new UnsupportedOperationException();
+                }
+            }).orElseThrow();
+        }
     }
 
     private Document loadStructuredDocumentFromCache(final UUID resultId, boolean makeSign) {
@@ -204,12 +207,12 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return Document.newInstance(fileName, signedDocument);
     }
 
-    private void waitForDocument(final UUID resultId) {
+    private boolean waitForDocument(final UUID resultId) {
         final CountDownLatch count = new CountDownLatch(TRIALS);
         final String uid = resultId.toString();
         while (count.getCount() > 0) {
             if (this.redisDAO.exists(uid)) {
-                break;
+                return true;
             }
             else {
                 count.countDown();
@@ -221,6 +224,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
                 }
             }
         }
+        return false;
     }
 
     /**
