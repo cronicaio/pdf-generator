@@ -13,6 +13,7 @@ import io.cronica.api.pdfgenerator.component.redis.RedisDocument;
 import io.cronica.api.pdfgenerator.database.model.DocumentCertificate;
 import io.cronica.api.pdfgenerator.database.repository.DocumentCertificateRepository;
 import io.cronica.api.pdfgenerator.exception.DocumentNotFoundException;
+import io.cronica.api.pdfgenerator.exception.DocumentPendingException;
 import io.cronica.api.pdfgenerator.utils.ChaCha20Utils;
 import io.cronica.api.pdfgenerator.utils.DocumentUtils;
 import io.cronica.api.pdfgenerator.utils.FileUtility;
@@ -41,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 public class PDFDocumentServiceImpl implements PDFDocumentService {
 
     private static final int TIME_TO_SLEEP_MILLIS = 500;
-    private static final int TRIALS = 120;
+    private static final int TRIALS = 240;
 
     private final RedisDAO redisDAO;
 
@@ -80,6 +81,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         try {
             return generateDownloadableDocument(uid, true);
         } catch (Exception ex) {
+            log.error("[SERVICE] error on awaiting generation of the document", ex);
             log.info("[SERVICE] there is no PDF document with '{}' UUID", uuid);
             throw new DocumentNotFoundException("There is no PDF document with '" + uuid + "' UUID");
         }
@@ -175,8 +177,23 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
     }
 
     private Document generateDownloadableDocument(final UUID resultId, boolean makeSign) {
-        waitForDocument(resultId);
-        return loadStructuredDocumentFromCache(resultId, makeSign);
+        if(waitForDocument(resultId)) {
+            return loadStructuredDocumentFromCache(resultId, makeSign);
+        } else {
+            final Optional<DocumentStatus> status = this.documentObserver.check(resultId.toString());
+            return status.map(documentStatus -> {
+                switch (documentStatus) {
+                    case GENERATED:
+                        return loadStructuredDocumentFromCache(resultId, makeSign);
+                    case PENDING:
+                        throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'pending' state", resultId));
+                    case REGISTERED:
+                        throw new DocumentPendingException(String.format("Generating of PDF of the document %1$s in 'registered' state", resultId));
+                    default:
+                        throw new UnsupportedOperationException();
+                }
+            }).orElseThrow();
+        }
     }
 
     private Document loadStructuredDocumentFromCache(final UUID resultId, boolean makeSign) {
@@ -190,12 +207,12 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
         return Document.newInstance(fileName, signedDocument);
     }
 
-    private void waitForDocument(final UUID resultId) {
+    private boolean waitForDocument(final UUID resultId) {
         final CountDownLatch count = new CountDownLatch(TRIALS);
         final String uid = resultId.toString();
         while (count.getCount() > 0) {
             if (this.redisDAO.exists(uid)) {
-                break;
+                return true;
             }
             else {
                 count.countDown();
@@ -207,6 +224,7 @@ public class PDFDocumentServiceImpl implements PDFDocumentService {
                 }
             }
         }
+        return false;
     }
 
     /**
