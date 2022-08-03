@@ -63,10 +63,14 @@ public class DocumentObserverImpl implements DocumentObserver {
 
     @StreamListener(GeneratePdfStream.REQUEST)
     public void observe_t(@Payload final GeneratePdfRequest request) {
+        log.info("Receive {}", request);
         this.setStatus(path(request.getResultId().toString()), DocumentStatus.PENDING);
+        log.info("Received message of document type: {}", request.getDocument().getStorageType());
         if (request.getDocument().getStorageType() == GeneratePdfRequest.StorageType.S3) {
+            log.info("Received message of document type 'Non Structured'");
             this.nonStructuredPdfGenerator.generateAndSave(request);
         } else {
+            log.info("Received message of document type 'Structured'");
             this.structuredPdfGenerator.generateAndSave(request);
         }
         this.setStatus(path(request.getResultId().toString()), DocumentStatus.GENERATED);
@@ -79,6 +83,7 @@ public class DocumentObserverImpl implements DocumentObserver {
                 .build();
         this.putDocumentIDToObserve(request.getResultId().toString());
         this.stream.generatePdfRequest().send(message);
+        log.info("Submit {}", request);
     }
 
     @Scheduled(fixedDelay = 1000)
